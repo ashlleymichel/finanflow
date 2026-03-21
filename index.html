@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinanFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --orange: #FF6B2B; --orange-light: #FF8C55; --orange-pale: #FFF0E8;
+    --black: #0D0D0D; --gray-600: #6B6B6B; --gray-400: #AFAFAF;
+    --gray-300: #D0D0D0; --gray-200: #E8E8E8; --gray-100: #F5F5F5;
+    --white: #FFFFFF; --green: #16A34A; --red: #DC2626; --blue: #3B6EF8;
+    --sidebar-width: 240px; --sidebar-collapsed: 62px;
+    --radius: 16px; --radius-sm: 10px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.06); --shadow-md: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  body { font-family:'Inter',sans-serif; background:var(--gray-100); color:var(--black); overflow-x:hidden; font-weight:400; }
+
+  /* SPLASH */
+  #splash { position:fixed; inset:0; background:var(--white); display:flex; align-items:center; justify-content:center; z-index:9999; }
+  #splash-logo { font-size:52px; font-weight:600; color:var(--orange); letter-spacing:-1px; animation:pulse 1s ease-in-out infinite; }
+  #splash.hide { animation:splashOut 0.5s ease forwards; }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.06);opacity:.82} }
+  @keyframes splashOut { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1.04);pointer-events:none;display:none} }
+
+  /* AUTH SCREEN */
+  #auth-screen {
+    display:none; position:fixed; inset:0;
+    background: linear-gradient(145deg, #fff 60%, #FFF0E8 100%);
+    align-items:center; justify-content:center; z-index:8000; flex-direction:column;
+  }
+  #auth-screen.show { display:flex; }
+  .auth-box { width:400px; max-width:92vw; display:flex; flex-direction:column; align-items:center; }
+  .auth-header { text-align:center; margin-bottom:22px; }
+  .auth-logo { font-size:38px; font-weight:600; color:var(--orange); letter-spacing:-1px; margin-bottom:8px; display:block; }
+  .auth-tagline { font-size:14px; color:var(--gray-400); letter-spacing:.2px; font-style:italic; }
+  .auth-divider { width:36px; height:2px; background:var(--orange); border-radius:99px; margin:14px auto 0; opacity:.35; }
+  .auth-card { background:var(--white); border-radius:var(--radius); padding:28px; box-shadow:0 8px 40px rgba(0,0,0,0.08); border:1px solid var(--gray-200); width:100%; }
+  .auth-tabs { display:flex; gap:0; margin-bottom:22px; border-bottom:1.5px solid var(--gray-200); }
+  .auth-tab { flex:1; padding:9px; text-align:center; font-size:13.5px; font-weight:400; cursor:pointer; border:none; background:none; font-family:'Inter'; color:var(--gray-400); border-bottom:2px solid transparent; margin-bottom:-1.5px; transition:all .15s; }
+  .auth-tab.active { color:var(--orange); border-bottom-color:var(--orange); font-weight:500; }
+  .auth-form { display:flex; flex-direction:column; gap:13px; }
+  .auth-input { width:100%; padding:10px 13px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-family:'Inter'; font-size:13.5px; outline:none; transition:border-color .13s; background:var(--white); }
+  .auth-input:focus { border-color:var(--orange); }
+  .auth-btn { width:100%; padding:11px; border-radius:var(--radius-sm); border:none; background:var(--orange); color:#fff; font-family:'Inter'; font-size:14px; font-weight:500; cursor:pointer; transition:all .15s; margin-top:2px; }
+  .auth-btn:hover { background:var(--orange-light); }
+  .auth-btn:disabled { opacity:.6; cursor:not-allowed; }
+  .auth-msg { font-size:12.5px; padding:9px 12px; border-radius:var(--radius-sm); margin-top:2px; }
+  .auth-msg.error { background:#FDECEA; color:var(--red); }
+  .auth-msg.success { background:#E8F8EF; color:var(--green); }
+  /* RESET PASSWORD SCREEN */
+  #reset-screen {
+    display:none; position:fixed; inset:0;
+    background: linear-gradient(145deg, #fff 60%, #FFF0E8 100%);
+    align-items:center; justify-content:center; z-index:9000; flex-direction:column;
+  }
+  #reset-screen.show { display:flex; }
+  .reset-box { width:400px; max-width:92vw; display:flex; flex-direction:column; align-items:center; }
+  .reset-header { text-align:center; margin-bottom:28px; }
+  .reset-card { background:var(--white); border-radius:var(--radius); padding:28px; box-shadow:0 8px 40px rgba(0,0,0,0.08); border:1px solid var(--gray-200); width:100%; }
+  .reset-title { font-size:17px; font-weight:600; margin-bottom:6px; }
+  .reset-sub { font-size:13px; color:var(--gray-400); margin-bottom:22px; line-height:1.5; }
+  .pass-input-wrap { position:relative; }
+  .pass-toggle { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--gray-400); padding:0; transition:color .13s; }
+  .pass-toggle:hover { color:var(--orange); }
+  .forgot-link { background:none; border:none; font-family:'Inter'; font-size:12px; color:var(--gray-400); cursor:pointer; text-align:right; padding:0; transition:color .13s; text-decoration:underline; text-underline-offset:2px; align-self:flex-end; }
+  .forgot-link:hover { color:var(--orange); }
+  #auth-forgot { display:none; }
+  #auth-forgot.show { display:block; }
+  .back-link { background:none; border:none; font-family:'Inter'; font-size:12.5px; color:var(--gray-400); cursor:pointer; display:inline-flex; align-items:center; gap:5px; padding:0; margin-bottom:18px; transition:color .13s; }
+  .back-link:hover { color:var(--orange); }
+
+  /* APP */
+  #app { display:none; min-height:100vh; }
+  #app.show { display:flex; animation:fadeUp .4s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* SIDEBAR */
+  #sidebar { width:var(--sidebar-width); background:var(--white); display:flex; flex-direction:column; padding:22px 14px; position:fixed; left:0; top:0; bottom:0; border-right:1px solid var(--gray-200); z-index:100; transition:width .24s cubic-bezier(.4,0,.2,1); overflow:hidden; }
+  #sidebar.collapsed { width:var(--sidebar-collapsed); }
+  #sidebar.collapsed .hide-on-collapse { display:none !important; }
+  #sidebar.collapsed .nav-item { justify-content:center; padding:10px; }
+  #sidebar.collapsed .user-pill { justify-content:center; }
+  .sidebar-top { display:flex; align-items:center; justify-content:space-between; padding:0 4px 20px; border-bottom:1px solid var(--gray-200); margin-bottom:16px; }
+  .sidebar-brand { display:flex; align-items:center; gap:6px; }
+  .brand-dot { display:none !important; }
+  .brand-name { font-size:20px; font-weight:600; color:var(--orange); letter-spacing:-.5px; white-space:nowrap; }
+  #sidebar-toggle { width:28px;height:28px;border-radius:8px;border:1.5px solid var(--gray-200);background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s;color:var(--gray-400); }
+  #sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); background:var(--orange-pale); }
+  .nav-group { font-size:10px; font-weight:500; color:var(--gray-400); letter-spacing:1px; text-transform:uppercase; padding:0 8px; margin:12px 0 4px; white-space:nowrap; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:var(--radius-sm); cursor:pointer; font-size:13.5px; font-weight:400; color:var(--gray-600); transition:all .14s; margin-bottom:1px; border:none; background:none; width:100%; text-align:left; white-space:nowrap; overflow:hidden; }
+  .nav-item:hover { background:var(--gray-100); color:var(--black); }
+  .nav-item.active { background:var(--orange-pale); color:var(--orange); font-weight:500; }
+  .nav-icon { width:18px;height:18px;flex-shrink:0;opacity:.7; }
+  .nav-icon[data-lucide], i.nav-icon { width:18px !important;height:18px !important;flex-shrink:0;opacity:.7;display:inline-flex; }
+  .nav-item.active i.nav-icon { opacity:1; }
+  /* Lucide i tags used as inline icons */
+  i[data-lucide] { display:inline-flex;align-items:center;justify-content:center; }
+  .scard-ico i[data-lucide] { width:14px !important;height:14px !important; }
+  /* .nav-item.active .nav-icon handled above */
+  .sidebar-footer { margin-top:auto; padding-top:14px; border-top:1px solid var(--gray-200); }
+  .user-pill { display:flex; align-items:center; gap:9px; padding:8px 6px; border-radius:var(--radius-sm); cursor:pointer; overflow:hidden; }
+  .user-avatar { width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0; }
+  .user-name { font-size:13px;font-weight:500;white-space:nowrap; }
+  .user-plan { font-size:11px;color:var(--gray-400);white-space:nowrap; }
+  .logout-btn { display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:var(--radius-sm);font-size:12.5px;color:var(--gray-400);cursor:pointer;border:none;background:none;font-family:'Inter';width:100%;margin-top:4px;transition:all .14s; }
+  .logout-btn:hover { background:#FDECEA; color:var(--red); }
+
+  /* MAIN */
+  #main { margin-left:var(--sidebar-width); flex:1; padding:26px 30px; min-height:100vh; transition:margin-left .24s cubic-bezier(.4,0,.2,1); }
+  #main.wide { margin-left:var(--sidebar-collapsed); }
+
+  /* PAGE */
+  .page { display:none; }
+  .page.active { display:block; animation:fadeUp .28s ease; }
+
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+  .page-title { font-size:19px; font-weight:600; letter-spacing:-.3px; }
+  .page-sub { font-size:12.5px; color:var(--gray-400); margin-top:2px; }
+
+  /* BUTTONS */
+  .btn { padding:8px 15px; border-radius:var(--radius-sm); border:none; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:6px; }
+  .btn-primary { background:var(--orange); color:#fff; }
+  .btn-primary:hover { background:var(--orange-light); transform:translateY(-1px); box-shadow:0 4px 12px rgba(255,107,43,.28); }
+  .btn-primary:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+  .btn-ghost { background:var(--white); color:var(--black); border:1px solid var(--gray-200); font-weight:400; }
+  .btn-ghost:hover { border-color:var(--orange); color:var(--orange); }
+  .btn-outline { background:transparent; color:var(--gray-600); border:1.5px solid var(--gray-200); font-weight:400; }
+  .btn-outline:hover { border-color:var(--orange); color:var(--orange); background:var(--orange-pale); }
+  .btn-danger { background:transparent; color:var(--red); border:1.5px solid #FDECEA; font-weight:400; }
+  .btn-danger:hover { background:#FDECEA; }
+
+  /* GRIDS */
+  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:13px; margin-bottom:18px; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px; }
+
+  /* SUMMARY CARDS */
+  .scard { background:var(--white); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); }
+  .scard-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
+  .scard-label { font-size:11px; font-weight:400; color:var(--gray-400); text-transform:uppercase; letter-spacing:.4px; }
+  .scard-ico { width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center; }
+  .scard-ico svg { width:14px;height:14px; }
+  .ico-orange { background:var(--orange-pale); color:var(--orange); }
+  .ico-green { background:#E8F8EF; color:var(--green); }
+  .ico-red { background:#FDECEA; color:var(--red); }
+  .ico-blue { background:#E8F0FF; color:var(--blue); }
+  .scard-val { font-size:19px; font-weight:500; letter-spacing:-.4px; }
+  .scard-badge { font-size:11.5px; font-weight:400; margin-top:2px; }
+  .up { color:var(--green); } .dn { color:var(--red); }
+
+  /* CARD */
+  .card { background:var(--white); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+  .card-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .sec-title { font-size:14.5px; font-weight:500; }
+
+  /* MONTH PICKER */
+  .mpicker-wrap { position:relative; }
+  .mpicker-btn { padding:7px 13px; border-radius:8px; font-size:12.5px; font-weight:400; border:1.5px solid var(--gray-200); background:var(--white); cursor:pointer; font-family:'Inter'; color:var(--black); transition:all .14s; display:flex; align-items:center; gap:6px; }
+  .mpicker-btn:hover, .mpicker-btn.open { border-color:var(--orange); color:var(--orange); background:var(--orange-pale); }
+  .month-dd { position:absolute; top:calc(100% + 6px); right:0; background:var(--white); border-radius:var(--radius-sm); box-shadow:var(--shadow-md); border:1px solid var(--gray-200); padding:8px; z-index:200; width:210px; display:none; grid-template-columns:repeat(3,1fr); gap:4px; }
+  .month-dd.open { display:grid; }
+  .mopt { padding:7px 5px; border-radius:7px; font-size:12px; font-weight:400; text-align:center; cursor:pointer; border:none; background:none; font-family:'Inter'; color:var(--gray-600); transition:all .12s; }
+  .mopt:hover { background:var(--gray-100); color:var(--black); }
+  .mopt.active { background:var(--orange); color:#fff; font-weight:500; }
+
+  /* TX */
+  .tx-list { display:flex; flex-direction:column; gap:7px; }
+  .tx-item { display:flex; align-items:center; gap:11px; padding:10px 13px; border-radius:var(--radius-sm); background:var(--gray-100); transition:background .13s; }
+  .tx-item:hover { background:var(--orange-pale); }
+  .tx-ico { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--white);flex-shrink:0; }
+  .tx-name { font-size:13px; font-weight:500; }
+  .tx-cat { font-size:11.5px; color:var(--gray-400); }
+  .tx-amt { margin-left:auto; font-size:13.5px; font-weight:500; }
+  .tx-amt.income { color:var(--green); } .tx-amt.expense { color:var(--red); }
+  .tx-dt { font-size:10.5px; color:var(--gray-400); text-align:right; }
+  .tx-del { background:none; border:none; cursor:pointer; color:var(--gray-300); padding:4px; border-radius:6px; transition:all .13s; flex-shrink:0; }
+  .tx-del:hover { color:var(--red); background:#FDECEA; }
+
+  /* PROGRESS */
+  .prog-bar { height:5px; background:var(--gray-200); border-radius:99px; overflow:hidden; }
+  .prog-fill { height:100%; background:var(--orange); border-radius:99px; transition:width .6s ease; }
+
+  /* BARS */
+  .bar { border-radius:5px 5px 0 0; transition:opacity .18s; cursor:pointer; }
+  .bar:hover { opacity:.72; }
+  .bar.cur { background:var(--orange); } .bar.prv { background:var(--gray-200); }
+  .chart-legend { display:flex; gap:14px; margin-bottom:11px; }
+  .ldot { width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px; }
+
+  /* PIGGY */
+  .piggy-card { background:var(--white); border-radius:var(--radius); padding:17px; box-shadow:var(--shadow); transition:all .18s; }
+  .piggy-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+  .del-confirm { background:#FFF5F5; border:1.5px solid #FDECEA; border-radius:var(--radius-sm); padding:12px 14px; margin-top:14px; display:none; }
+  .del-confirm.show { display:block; }
+  .del-confirm p { font-size:13px; color:var(--red); margin-bottom:10px; }
+  .del-confirm-actions { display:flex; gap:7px; }
+
+  /* TIPS */
+  .tip-card { background:var(--white); border-radius:var(--radius); padding:15px 17px; box-shadow:var(--shadow); display:flex; gap:13px; align-items:flex-start; transition:box-shadow .18s; }
+  .tip-card:hover { box-shadow:var(--shadow-md); }
+  .tip-tag { display:inline-block; padding:2px 7px; border-radius:99px; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.4px; background:var(--orange-pale); color:var(--orange); margin-top:7px; }
+
+  /* INV */
+  .inv-row { display:flex; align-items:center; padding:10px 13px; border-radius:var(--radius-sm); background:var(--gray-100); gap:11px; margin-bottom:7px; transition:background .13s; }
+  .inv-row:hover { background:var(--orange-pale); }
+  .inv-ticker { font-size:13px; font-weight:600; width:58px; }
+  .inv-name { font-size:13px; color:var(--gray-600); flex:1; }
+  .inv-val { font-size:13px; font-weight:500; width:96px; text-align:right; }
+  .inv-chg { font-size:13px; font-weight:500; width:60px; text-align:right; }
+  .inv-chg.pos { color:var(--green); } .inv-chg.neg { color:var(--red); }
+
+  /* COMP TABLE */
+  .comp-table { width:100%; border-collapse:collapse; }
+  .comp-table th { font-size:11px; font-weight:500; color:var(--gray-400); text-transform:uppercase; letter-spacing:.5px; padding:0 12px 10px; text-align:left; border-bottom:1px solid var(--gray-200); white-space:nowrap; }
+  .comp-table th:not(:first-child) { text-align:right; }
+  .comp-table td { padding:11px 12px; font-size:13px; border-bottom:1px solid var(--gray-100); vertical-align:middle; }
+  .comp-table td:not(:first-child) { text-align:right; white-space:nowrap; }
+  .comp-table tr:last-child td { border-bottom:none; }
+  .comp-table tbody tr { transition:background .13s; }
+  .comp-table tbody tr:hover td { background:var(--orange-pale); }
+  .cat-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; }
+  .comp-badge { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:99px; font-size:12px; font-weight:500; }
+  .comp-badge.up { background:#E8F8EF; color:var(--green); }
+  .comp-badge.dn { background:#FDECEA; color:var(--red); }
+  .comp-badge.flat { background:var(--gray-100); color:var(--gray-400); }
+
+  /* DONUT */
+  .donut-wrap { position:relative; display:inline-flex; align-items:center; justify-content:center; }
+  .donut-wrap svg { transform:rotate(-90deg); }
+  .donut-center { position:absolute; text-align:center; }
+  .donut-cv { font-size:16px; font-weight:500; line-height:1.3; }
+
+  /* TABS */
+  .tab-row { display:flex; gap:3px; background:var(--gray-100); border-radius:var(--radius-sm); padding:3px; margin-bottom:16px; width:fit-content; }
+  .tab { padding:6px 15px; border-radius:8px; font-size:13px; font-weight:400; cursor:pointer; transition:all .13s; border:none; background:none; font-family:'Inter'; color:var(--gray-600); }
+  .tab.active { background:var(--white); color:var(--orange); box-shadow:var(--shadow); font-weight:500; }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.3); display:flex; align-items:center; justify-content:center; z-index:1000; opacity:0; pointer-events:none; transition:opacity .18s; }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal { background:var(--white); border-radius:var(--radius); padding:24px; width:410px; max-width:90vw; transform:translateY(14px); transition:transform .2s; box-shadow:var(--shadow-md); }
+  .modal-overlay.open .modal { transform:translateY(0); }
+  .modal-title { font-size:16px; font-weight:600; margin-bottom:17px; }
+  .fg { margin-bottom:13px; }
+  .fl { font-size:12px; font-weight:500; color:var(--gray-600); display:block; margin-bottom:5px; }
+  .fi { width:100%; padding:9px 12px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-family:'Inter'; font-size:13.5px; font-weight:400; outline:none; transition:border-color .13s; }
+  .fi:focus { border-color:var(--orange); }
+  .fsel { width:100%; padding:9px 12px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-family:'Inter'; font-size:13.5px; outline:none; background:var(--white); cursor:pointer; }
+  .fsel:focus { border-color:var(--orange); }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+
+  /* LOADING SPINNER */
+  .spinner { width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .loading-row { display:flex;align-items:center;justify-content:center;padding:32px;gap:10px;color:var(--gray-400);font-size:13px; }
+  .spinner-orange { border-color:rgba(255,107,43,.2);border-top-color:var(--orange); }
+
+  /* LINE CHART */
+  .lc-wrap { width:100%; }
+  .lc-wrap svg { display:block; width:100%; }
+
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-thumb { background:var(--gray-200); border-radius:99px; }
+
+  /* ══════════════════════════════════════
+     MOBILE — bottom navigation bar
+     breakpoint: ≤ 768px
+  ══════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* Hide desktop sidebar entirely */
+    #sidebar { display: none !important; }
+
+    /* Main fills full width — top padding clears fixed topbar, bottom clears nav bar */
+    #main, #main.wide {
+      margin-left: 0 !important;
+      padding: 72px 14px 90px;
+      min-height: 100vh;
+    }
+
+    /* ── BOTTOM NAV BAR ── */
+    #mobile-nav {
+      display: flex;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--gray-200);
+      z-index: 500;
+      padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    }
+    .mob-nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px; padding: 4px 2px;
+      cursor: pointer; border: none; background: none;
+      font-family: 'Inter'; font-size: 10px; font-weight: 400;
+      color: var(--gray-400); transition: color .13s;
+    }
+    .mob-nav-item i[data-lucide] { width: 20px !important; height: 20px !important; }
+    .mob-nav-item.active { color: var(--orange); font-weight: 500; }
+    .mob-nav-item.active i[data-lucide] { stroke: var(--orange); }
+
+    /* ── MOBILE TOP BAR ── */
+    #mobile-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 400;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 12px 16px;
+      height: 56px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    }
+    #mobile-topbar .mob-logo {
+      font-size: 22px; font-weight: 600; color: var(--orange); letter-spacing: -.5px;
+    }
+    #mobile-topbar .mob-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--orange); display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #fff; cursor: pointer;
+      flex-shrink: 0; transition: opacity .15s;
+      border: none; font-family: 'Inter';
+    }
+    #mobile-topbar .mob-avatar:hover { opacity: .85; }
+
+    /* ── MOBILE SIDE MENU (drawer) ── */
+    #mob-side-menu-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3);
+      z-index: 800; animation: fadeIn .2s ease;
+    }
+    #mob-side-menu-overlay.open { display: block; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    #mob-side-menu {
+      position: fixed; top: 0; right: -280px; bottom: 0; width: 260px;
+      background: var(--white); z-index: 900;
+      display: flex; flex-direction: column;
+      padding: 0;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+      transition: right .25s cubic-bezier(.4,0,.2,1);
+    }
+    #mob-side-menu.open { right: 0; }
+    .mob-menu-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 24px 18px 18px;
+      border-bottom: 1px solid var(--gray-200);
+      gap: 24px;
+    }
+    .mob-menu-user { display: flex; align-items: center; gap: 11px; }
+    .mob-menu-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--orange); display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 600; color: #fff; flex-shrink: 0;
+    }
+    .mob-menu-name { font-size: 14px; font-weight: 500; }
+    .mob-menu-email { font-size: 11.5px; color: var(--gray-400); margin-top: 1px; }
+    .mob-menu-close {
+      width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--gray-200);
+      background: none; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; color: var(--gray-400); transition: all .13s;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .mob-menu-close:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-pale); }
+    .mob-menu-body { flex: 1; padding: 16px 12px; }
+    .mob-menu-footer { padding: 16px 12px; border-top: 1px solid var(--gray-200); }
+    .mob-menu-btn {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 11px 12px; border-radius: var(--radius-sm);
+      border: none; background: none; font-family: 'Inter';
+      font-size: 14px; font-weight: 400; color: var(--gray-600);
+      cursor: pointer; transition: all .13s; text-align: left;
+    }
+    .mob-menu-btn:hover { background: var(--gray-100); color: var(--black); }
+    .mob-menu-logout {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 11px 12px; border-radius: var(--radius-sm);
+      border: none; background: none; font-family: 'Inter';
+      font-size: 14px; font-weight: 400; color: var(--red);
+      cursor: pointer; transition: all .13s; text-align: left;
+    }
+    .mob-menu-logout:hover { background: #FDECEA; }
+
+    /* ── GRIDS collapse to 2 or 1 column ── */
+    .grid-4 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .grid-2 { grid-template-columns: 1fr; gap: 10px; }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+    /* ── PAGE HEADER stack vertically ── */
+    .page-header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+    .page-title { font-size: 17px; }
+
+    /* ── CARDS smaller padding ── */
+    .card { padding: 14px; }
+    .scard { padding: 12px 14px; }
+    .scard-val { font-size: 17px; }
+
+    /* ── Comp table scrollable ── */
+    .comp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .comp-table { min-width: 480px; }
+
+    /* ── Piggy grid 1 col on very small ── */
+    @media (max-width: 480px) {
+      .grid-3 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Month picker dropdown ── */
+    .month-dd {
+      right: 0; left: auto;
+      width: 160px;
+      grid-template-columns: 1fr;
+    }
+    .mopt {
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    /* ── Modals full width ── */
+    .modal { width: 95vw; padding: 20px; }
+
+    /* ── Auth screen ── */
+    .auth-box { width: 95vw; }
+    .auth-card { padding: 22px 18px; }
+    .reset-box { width: 95vw; }
+    .reset-card { padding: 22px 18px; }
+
+    /* ── Line chart smaller height ── */
+    .lc-wrap svg { height: 100px !important; }
+
+    /* ── TX items on mobile ── */
+    .tx-name { font-size: 12.5px; }
+    .tx-cat { font-size: 11px; }
+
+    /* ── Prevent zoom on input focus (iOS/Android) ── */
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Desktop: hide ALL mobile elements */
+  @media (min-width: 769px) {
+    #mobile-nav { display: none !important; }
+    #mobile-topbar { display: none !important; }
+    #mob-side-menu { display: none !important; }
+    #mob-side-menu-overlay { display: none !important; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash"><div id="splash-logo">FinanFlow</div></div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+
+    <!-- Header centralizado -->
+    <div class="auth-header">
+      <span class="auth-logo">FinanFlow</span>
+    </div>
+
+    <div class="auth-card">
+
+      <!-- LOGIN / SIGNUP tabs -->
+      <div id="auth-login-signup">
+        <div class="auth-tabs">
+          <button class="auth-tab active" onclick="switchAuthTab('login',this)">Entrar</button>
+          <button class="auth-tab" onclick="switchAuthTab('signup',this)">Criar conta</button>
+        </div>
+
+        <!-- LOGIN -->
+        <div id="auth-login">
+          <div class="auth-form">
+            <div><label class="fl">E-mail</label><input class="auth-input" type="email" id="login-email" placeholder="seu@email.com"></div>
+            <div>
+              <label class="fl">Senha</label>
+              <input class="auth-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+              <button class="forgot-link" onclick="showForgot()" style="margin-top:7px;display:block">Esqueci minha senha</button>
+            </div>
+            <button class="auth-btn" id="login-btn" onclick="doLogin()">Entrar</button>
+            <div id="login-msg" style="display:none" class="auth-msg"></div>
+          </div>
+        </div>
+
+        <!-- SIGNUP -->
+        <div id="auth-signup" style="display:none">
+          <div class="auth-form">
+            <div><label class="fl">Nome</label><input class="auth-input" type="text" id="signup-name" placeholder="Seu nome"></div>
+            <div><label class="fl">E-mail</label><input class="auth-input" type="email" id="signup-email" placeholder="seu@email.com"></div>
+            <div><label class="fl">Senha</label><input class="auth-input" type="password" id="signup-pass" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')doSignup()"></div>
+            <button class="auth-btn" id="signup-btn" onclick="doSignup()">Criar conta</button>
+            <div id="signup-msg" style="display:none" class="auth-msg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESQUECI A SENHA -->
+      <div id="auth-forgot">
+        <button class="back-link" onclick="hideForgot()">
+          <i data-lucide="arrow-left" style="width:14px;height:14px"></i>
+          Voltar ao login
+        </button>
+        <div style="margin-bottom:18px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">Recuperar senha</div>
+          <div style="font-size:13px;color:var(--gray-400);line-height:1.5">Informe seu e-mail e enviaremos um link para você redefinir a senha criada no primeiro acesso.</div>
+        </div>
+        <div class="auth-form">
+          <div><label class="fl">E-mail cadastrado</label><input class="auth-input" type="email" id="forgot-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doForgot()"></div>
+          <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Enviar link de redefinição</button>
+          <div id="forgot-msg" style="display:none" class="auth-msg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD SCREEN -->
+<div id="reset-screen">
+  <div class="reset-box">
+    <div class="reset-header">
+      <span class="auth-logo">FinanFlow</span>
+    </div>
+    <div class="reset-card">
+      <div class="reset-title">Criar nova senha</div>
+      <div class="reset-sub">Escolha uma senha forte com pelo menos 6 caracteres. Após salvar você será direcionado para o dashboard.</div>
+      <div class="auth-form">
+        <div>
+          <label class="fl">Nova senha</label>
+          <div class="pass-input-wrap">
+            <input class="auth-input" type="password" id="reset-pass" placeholder="Mínimo 6 caracteres" style="padding-right:40px">
+            <button class="pass-toggle" onclick="togglePassVisibility('reset-pass', this)" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="fl">Confirmar nova senha</label>
+          <div class="pass-input-wrap">
+            <input class="auth-input" type="password" id="reset-pass-confirm" placeholder="Repita a nova senha" style="padding-right:40px" onkeydown="if(event.key==='Enter')doResetPassword()">
+            <button class="pass-toggle" onclick="togglePassVisibility('reset-pass-confirm', this)" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="auth-btn" id="reset-btn" onclick="doResetPassword()">Salvar nova senha</button>
+        <div id="reset-msg" style="display:none" class="auth-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- MOBILE TOP BAR — fixed at top, above all content -->
+  <div id="mobile-topbar">
+    <span class="mob-logo">FinanFlow</span>
+    <button class="mob-avatar" id="mob-avatar-initials" onclick="openMobMenu()">--</button>
+  </div>
+
+  <!-- MOBILE SIDE MENU OVERLAY -->
+  <div id="mob-side-menu-overlay" onclick="closeMobMenu()"></div>
+
+  <!-- MOBILE SIDE MENU DRAWER -->
+  <div id="mob-side-menu">
+    <div class="mob-menu-header">
+      <div class="mob-menu-user">
+        <div class="mob-menu-avatar" id="mob-menu-avatar">--</div>
+        <div>
+          <div class="mob-menu-name" id="mob-menu-name">Carregando...</div>
+          <div class="mob-menu-email" id="mob-menu-email"></div>
+        </div>
+      </div>
+      <button class="mob-menu-close" onclick="closeMobMenu()">
+        <i data-lucide="x" style="width:14px;height:14px"></i>
+      </button>
+    </div>
+    <div class="mob-menu-body">
+      <div style="font-size:11px;font-weight:500;color:var(--gray-400);text-transform:uppercase;letter-spacing:.8px;padding:0 4px;margin-bottom:8px">Conta</div>
+      <button class="mob-menu-btn" disabled style="opacity:.5;cursor:default">
+        <i data-lucide="user" style="width:16px;height:16px"></i>
+        Perfil (em breve)
+      </button>
+      <button class="mob-menu-btn" disabled style="opacity:.5;cursor:default">
+        <i data-lucide="settings" style="width:16px;height:16px"></i>
+        Configurações (em breve)
+      </button>
+    </div>
+    <div class="mob-menu-footer">
+      <button class="mob-menu-logout" onclick="closeMobMenu(); doLogout()">
+        <i data-lucide="log-out" style="width:16px;height:16px"></i>
+        Sair da conta
+      </button>
+    </div>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV (visible only on mobile) -->
+  <nav id="mobile-nav">
+    <button class="mob-nav-item active" onclick="mobileNavigate('dashboard',this)" title="Dashboard">
+      <i data-lucide="house"></i>
+      <span>Início</span>
+    </button>
+    <button class="mob-nav-item" onclick="mobileNavigate('transacoes',this)" title="Transações">
+      <i data-lucide="file-text"></i>
+      <span>Transações</span>
+    </button>
+    <button class="mob-nav-item" onclick="mobileNavigate('comparativo',this)" title="Comparativo">
+      <i data-lucide="bar-chart-2"></i>
+      <span>Comparativo</span>
+    </button>
+    <button class="mob-nav-item" onclick="mobileNavigate('cofrinhos',this)" title="Cofrinhos">
+      <i data-lucide="piggy-bank"></i>
+      <span>Cofrinhos</span>
+    </button>
+    <button class="mob-nav-item" onclick="mobileNavigate('investimentos',this)" title="Investimentos">
+      <i data-lucide="trending-up"></i>
+      <span>Investir</span>
+    </button>
+  </nav>
+
+  <aside id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">
+        <div class="brand-dot"></div>
+        <span class="brand-name hide-on-collapse">FinanFlow</span>
+      </div>
+      <button id="sidebar-toggle" onclick="toggleSidebar()" title="Recolher menu">
+        <i data-lucide="chevron-left" style="width:14px;height:14px"></i>
+      </button>
+    </div>
+
+    <div class="nav-group hide-on-collapse">Principal</div>
+    <button class="nav-item active" onclick="navigate('dashboard',this)" title="Dashboard">
+      <i data-lucide="house" class="nav-icon"></i>
+      <span class="hide-on-collapse">Dashboard</span>
+    </button>
+    <button class="nav-item" onclick="navigate('transacoes',this)" title="Transações">
+      <i data-lucide="file-text" class="nav-icon"></i>
+      <span class="hide-on-collapse">Transações</span>
+    </button>
+    <button class="nav-item" onclick="navigate('comparativo',this)" title="Comparativo">
+      <i data-lucide="bar-chart-2" class="nav-icon"></i>
+      <span class="hide-on-collapse">Comparativo</span>
+    </button>
+
+    <div class="nav-group hide-on-collapse">Planejamento</div>
+    <button class="nav-item" onclick="navigate('cofrinhos',this)" title="Cofrinhos">
+      <i data-lucide="piggy-bank" class="nav-icon"></i>
+      <span class="hide-on-collapse">Cofrinhos</span>
+    </button>
+    <button class="nav-item" onclick="navigate('dicas',this)" title="Dicas">
+      <i data-lucide="lightbulb" class="nav-icon"></i>
+      <span class="hide-on-collapse">Dicas</span>
+    </button>
+
+    <div class="nav-group hide-on-collapse">Finanças</div>
+    <button class="nav-item" onclick="navigate('investimentos',this)" title="Investimentos">
+      <i data-lucide="trending-up" class="nav-icon"></i>
+      <span class="hide-on-collapse">Investimentos</span>
+    </button>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-avatar-initials">--</div>
+        <div class="hide-on-collapse">
+          <div class="user-name" id="sidebar-username">Carregando...</div>
+          <div class="user-plan">Conta Gratuita</div>
+        </div>
+      </div>
+      <button class="logout-btn hide-on-collapse" onclick="doLogout()">
+        <i data-lucide="log-out" style="width:14px;height:14px"></i>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <main id="main">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="dash-greeting">Olá 👋</div>
+          <div class="page-sub" id="dash-sub">Resumo de março de 2025</div>
+        </div>
+        <div class="mpicker-wrap">
+          <button class="mpicker-btn" id="mpicker-btn" onclick="toggleMonthPicker()">
+            <i data-lucide="calendar" style="width:12px;height:12px"></i>
+            <span id="mpicker-label">março 2025</span>
+            <i data-lucide="chevron-down" style="width:10px;height:10px"></i>
+          </button>
+          <div class="month-dd" id="month-dd">
+            <button class="mopt" onclick="selectMonth(0)">Jan</button><button class="mopt" onclick="selectMonth(1)">Fev</button>
+            <button class="mopt active" onclick="selectMonth(2)">Mar</button><button class="mopt" onclick="selectMonth(3)">Abr</button>
+            <button class="mopt" onclick="selectMonth(4)">Mai</button><button class="mopt" onclick="selectMonth(5)">Jun</button>
+            <button class="mopt" onclick="selectMonth(6)">Jul</button><button class="mopt" onclick="selectMonth(7)">Ago</button>
+            <button class="mopt" onclick="selectMonth(8)">Set</button><button class="mopt" onclick="selectMonth(9)">Out</button>
+            <button class="mopt" onclick="selectMonth(10)">Nov</button><button class="mopt" onclick="selectMonth(11)">Dez</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid-4" id="dash-scards">
+        <div class="scard"><div class="scard-row"><span class="scard-label">Saldo Total</span><div class="scard-ico ico-orange"><i data-lucide="circle-dollar-sign"></i></div></div><div class="scard-val" id="dash-saldo">R$ 0</div><div class="scard-badge" id="dash-saldo-badge"> </div></div>
+        <div class="scard"><div class="scard-row"><span class="scard-label">Receitas</span><div class="scard-ico ico-green"><i data-lucide="trending-up"></i></div></div><div class="scard-val up" id="dash-receitas">R$ 0</div><div class="scard-badge up" id="dash-rec-badge"> </div></div>
+        <div class="scard"><div class="scard-row"><span class="scard-label">Despesas</span><div class="scard-ico ico-red"><i data-lucide="trending-down"></i></div></div><div class="scard-val dn" id="dash-despesas">R$ 0</div><div class="scard-badge dn" id="dash-desp-badge"> </div></div>
+        <div class="scard"><div class="scard-row"><span class="scard-label">Balanço</span><div class="scard-ico ico-blue"><i data-lucide="line-chart"></i></div></div><div class="scard-val" id="dash-balanco" style="color:var(--orange)">R$ 0</div><div class="scard-badge" id="dash-bal-badge" style="color:var(--gray-400)">Este mês</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-hd"><div class="sec-title">Últimas Transações</div><button class="btn btn-ghost" style="font-size:12px;padding:5px 11px" onclick="navigate('transacoes',document.querySelector('[onclick*=transacoes]'))">Ver todas</button></div>
+          <div class="tx-list" id="dash-tx-list"><div class="loading-row"><div class="spinner spinner-orange"></div> Carregando...</div></div>
+        </div>
+        <div class="card">
+          <div class="sec-title" style="margin-bottom:13px">Gastos por Categoria</div>
+          <div id="cat-bars"><div class="loading-row"><div class="spinner spinner-orange"></div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">
+          <div class="sec-title">Comparativo com Mês Anterior</div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-600)"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"/></svg>Mês atual</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-400)"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--gray-300)" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"/></svg>Mês anterior</span>
+          </div>
+        </div>
+        <div class="lc-wrap" id="dash-line-chart"></div>
+      </div>
+    </div>
+
+    <!-- TRANSAÇÕES -->
+    <div class="page" id="page-transacoes">
+      <div class="page-header">
+        <div><div class="page-title">Transações</div><div class="page-sub">Gerencie entradas e saídas</div></div>
+        <button class="btn btn-primary" onclick="openModal('tx')">+ Nova Transação</button>
+      </div>
+      <div class="tab-row">
+        <button class="tab active" onclick="filterTx('all',this)">Todas</button>
+        <button class="tab" onclick="filterTx('income',this)">Entradas</button>
+        <button class="tab" onclick="filterTx('expense',this)">Saídas</button>
+      </div>
+      <div class="card"><div class="tx-list" id="tx-full-list"><div class="loading-row"><div class="spinner spinner-orange"></div> Carregando...</div></div></div>
+    </div>
+
+    <!-- COMPARATIVO -->
+    <div class="page" id="page-comparativo">
+      <div class="page-header"><div><div class="page-title">Comparativo de Gastos</div><div class="page-sub" id="comp-sub">Mês atual vs anterior</div></div></div>
+      <div class="grid-4" id="comp-scards">
+        <div class="scard"><div class="scard-label" id="comp-label-cur">Mês Atual</div><div class="scard-val" id="comp-cur">R$ 0</div></div>
+        <div class="scard"><div class="scard-label" id="comp-label-prev">Mês Anterior</div><div class="scard-val" style="color:var(--gray-400)" id="comp-prev">R$ 0</div></div>
+        <div class="scard"><div class="scard-label">Diferença</div><div class="scard-val" id="comp-diff">R$ 0</div></div>
+        <div class="scard"><div class="scard-label">Variação</div><div class="scard-val" id="comp-pct">0%</div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="sec-title" style="margin-bottom:11px">Por Categoria</div>
+        <div class="chart-legend"><span><span class="ldot" style="background:var(--orange)"></span><span style="font-size:12px">Atual</span></span><span><span class="ldot" style="background:var(--gray-200)"></span><span style="font-size:12px">Anterior</span></span></div>
+        <div id="comp-chart"></div>
+      </div>
+      <div class="card"><div class="sec-title" style="margin-bottom:13px">Análise Detalhada</div><div class="comp-table-wrap"><div id="comp-table"></div></div></div>
+    </div>
+
+    <!-- COFRINHOS -->
+    <div class="page" id="page-cofrinhos">
+      <div class="page-header"><div><div class="page-title">Cofrinhos</div><div class="page-sub">Suas metas financeiras</div></div><button class="btn btn-primary" onclick="openModal('piggy')">+ Nova Meta</button></div>
+      <div class="grid-3" id="piggy-grid"><div class="loading-row"><div class="spinner spinner-orange"></div> Carregando...</div></div>
+    </div>
+
+    <!-- DICAS -->
+    <div class="page" id="page-dicas">
+      <div class="page-header"><div><div class="page-title">Dicas de Economia</div><div class="page-sub">Práticas e acionáveis para o seu dia a dia</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:11px" id="tips-list"></div>
+    </div>
+
+    <!-- INVESTIMENTOS -->
+    <div class="page" id="page-investimentos">
+      <div class="page-header"><div><div class="page-title">Investimentos</div><div class="page-sub">Portfólio consolidado</div></div><button class="btn btn-primary" onclick="openModal('inv')">+ Adicionar Ativo</button></div>
+      <div class="grid-2">
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;padding:22px">
+          <div class="sec-title" style="align-self:flex-start;margin-bottom:16px">Alocação</div>
+          <div class="donut-wrap"><svg width="148" height="148" viewBox="0 0 160 160"><circle cx="80" cy="80" r="60" fill="none" stroke="var(--gray-100)" stroke-width="20"/><g id="donut-slices"></g></svg><div class="donut-center"><div class="donut-cv" id="donut-total">R$<br>0</div></div></div>
+          <div id="donut-legend" style="margin-top:16px;display:flex;flex-direction:column;gap:7px;width:100%"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:13px">
+          <div class="scard"><div class="scard-label">Total Investido</div><div class="scard-val" id="inv-total">R$ 0</div></div>
+          <div class="scard"><div class="scard-label">Rendimento (estimado)</div><div class="scard-val up" id="inv-rendimento">—</div></div>
+          <div class="scard"><div class="scard-label">Ativos cadastrados</div><div class="scard-val" id="inv-count" style="color:var(--orange)">0</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="sec-title" style="margin-bottom:13px">Ativos</div><div id="inv-list"><div class="loading-row"><div class="spinner spinner-orange"></div></div></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-tx">
+  <div class="modal">
+    <div class="modal-title">Nova Transação</div>
+    <div class="tab-row"><button class="tab active" onclick="setTxType('income',this)">Entrada</button><button class="tab" onclick="setTxType('expense',this)">Saída</button></div>
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" placeholder="Ex: Salário, Aluguel..." id="tx-desc"></div>
+    <div class="fg"><label class="fl">Valor (R$)</label><input class="fi" type="number" placeholder="0,00" id="tx-val" min="0.01" step="0.01"></div>
+    <div class="fg"><label class="fl">Categoria</label><select class="fsel" id="tx-cat"><option>Alimentação</option><option>Moradia</option><option>Transporte</option><option>Saúde</option><option>Lazer</option><option>Renda</option><option>Outros</option></select></div>
+    <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="tx-date"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('tx')">Cancelar</button><button class="btn btn-primary" id="tx-save-btn" onclick="addTransaction()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-piggy">
+  <div class="modal">
+    <div class="modal-title">Nova Meta Financeira</div>
+    <div class="fg">
+      <label class="fl">Nome da Meta</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div id="pg-emoji-preview" style="font-size:28px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--gray-100);border-radius:var(--radius-sm);flex-shrink:0">🎯</div>
+        <input class="fi" placeholder="Ex: Carro novo, Viagem Europa..." id="pg-name" oninput="updatePiggyEmoji('pg-emoji-preview', this.value)" style="flex:1">
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Valor Total (R$)</label><input class="fi" type="number" placeholder="10000" id="pg-goal"></div>
+    <div class="fg"><label class="fl">Já tenho (R$)</label><input class="fi" type="number" placeholder="0" id="pg-saved"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('piggy')">Cancelar</button><button class="btn btn-primary" id="pg-save-btn" onclick="addPiggy()">Criar Meta</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-deposit">
+  <div class="modal">
+    <div class="modal-title" id="deposit-title">Depositar no Cofrinho</div>
+    <div style="background:var(--gray-100);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px"><span style="color:var(--gray-600)">Guardado</span><span style="color:var(--gray-600)">Meta</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:500;margin-bottom:8px"><span style="color:var(--orange)" id="deposit-saved">R$ 0</span><span id="deposit-goal">R$ 0</span></div>
+      <div class="prog-bar"><div class="prog-fill" id="deposit-prog" style="width:0%"></div></div>
+      <div style="text-align:right;font-size:11.5px;color:var(--gray-400);margin-top:5px" id="deposit-pct">0%</div>
+    </div>
+    <div class="fg"><label class="fl">Valor a depositar (R$)</label><input class="fi" type="number" placeholder="0,00" id="deposit-val" min="0.01" step="0.01"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('deposit')">Cancelar</button><button class="btn btn-primary" id="deposit-btn" onclick="confirmDeposit()">Depositar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-piggy">
+  <div class="modal">
+    <div class="modal-title">Editar Meta</div>
+    <div class="fg">
+      <label class="fl">Nome da Meta</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div id="edit-pg-emoji-preview" style="font-size:28px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--gray-100);border-radius:var(--radius-sm);flex-shrink:0">🎯</div>
+        <input class="fi" id="edit-pg-name" placeholder="Nome da meta" oninput="updatePiggyEmoji('edit-pg-emoji-preview', this.value)" style="flex:1">
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Valor da Meta (R$)</label><input class="fi" type="number" id="edit-pg-goal" placeholder="10000" min="1"></div>
+    <div class="fg"><label class="fl">Valor guardado (R$)</label><input class="fi" type="number" id="edit-pg-saved" placeholder="0" min="0"></div>
+    <div class="del-confirm" id="del-confirm">
+      <p>⚠️ Tem certeza que deseja excluir este cofrinho?</p>
+      <div class="del-confirm-actions"><button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="hideDelConfirm()">Cancelar</button><button class="btn btn-danger" style="flex:1;justify-content:center" onclick="confirmDeletePiggy()">Excluir mesmo assim</button></div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-danger" style="border:1.5px solid #FDECEA" onclick="showDelConfirm()"><i data-lucide="trash-2" style="width:13px;height:13px"></i>Excluir</button>
+      <div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeModal('edit-piggy')">Cancelar</button><button class="btn btn-primary" id="edit-pg-btn" onclick="saveEditPiggy()">Salvar</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-inv">
+  <div class="modal">
+    <div class="modal-title">Novo Ativo</div>
+    <div class="fg"><label class="fl">Ticker / Nome</label><input class="fi" placeholder="Ex: PETR4, Tesouro IPCA+" id="inv-ticker"></div>
+    <div class="fg"><label class="fl">Nome completo</label><input class="fi" placeholder="Ex: Petrobras" id="inv-name-input"></div>
+    <div class="fg"><label class="fl">Tipo</label><select class="fsel" id="inv-type"><option>Ações</option><option>Renda Fixa</option><option>FIIs</option><option>Criptomoedas</option><option>Internacional</option></select></div>
+    <div class="fg"><label class="fl">Valor Investido (R$)</label><input class="fi" type="number" placeholder="0,00" id="inv-val"></div>
+    <div class="fg"><label class="fl">Variação (ex: +3.2%)</label><input class="fi" placeholder="+0.0%" id="inv-change"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('inv')">Cancelar</button><button class="btn btn-primary" id="inv-save-btn" onclick="addInv()">Adicionar</button></div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE ──
+const SUPABASE_URL = 'https://tlqevstavhdxnxfmaxqo.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscWV2c3RhdmhkeG54Zm1heHFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMTA2ODMsImV4cCI6MjA4OTY4NjY4M30.5SXOJN5KsEJNx2HOKb6U6a0P4eeTucPmPvZR_fpXmAQ';
+// Support both UMD bundle formats
+const _supabaseLib = (typeof supabase !== 'undefined') ? supabase : window.supabase;
+const { createClient } = _supabaseLib;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
+
+// ── STATE ──
+let currentUser = null;
+let transactions = [];
+let piggies = [];
+let investments = [];
+let txType = 'income';
+let txFilter = 'all';
+let sidebarCollapsed = false;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let editingPiggyId = null;
+let editingPiggyIdx = null;
+
+const monthNames = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const catColors = {'Moradia':'#FF6B2B','Alimentação':'#FF8C55','Transporte':'#FFA07A','Saúde':'#FFB899','Lazer':'#FFD4BF','Renda':'#16A34A','Outros':'#AFAFAF'};
+const catIcons = {Alimentação:'🛒',Moradia:'🏠',Transporte:'🚗',Saúde:'💊',Lazer:'🎮',Renda:'💼',Outros:'📌'};
+
+const tips = [
+  {icon:'💡',tag:'Regra Básica',title:'Regra 50/30/20',text:'Destine 50% da renda para necessidades, 30% para desejos e 20% para poupança e investimentos.'},
+  {icon:'🔄',tag:'Automatize',title:'Automatize suas economias',text:'Configure uma transferência automática no dia do salário para sua conta de investimentos.'},
+  {icon:'📱',tag:'Gastos Ocultos',title:'Revise suas assinaturas',text:'A cada 3 meses, revise todas as assinaturas recorrentes. Cancele o que não usa ativamente.'},
+  {icon:'🛒',tag:'Consumo',title:'A regra das 48 horas',text:'Para compras não essenciais acima de R$ 100, espere 48 horas antes de decidir.'},
+  {icon:'📊',tag:'Investimento',title:'Comece pelo Tesouro Direto',text:'Com apenas R$ 30 você já começa a render acima da inflação de forma segura.'},
+  {icon:'🎯',tag:'Metas',title:'Nomeie suas economias',text:'Crie contas separadas com nomes específicos: "Viagem 2025", "Fundo de Emergência".'},
+];
+
+// ── INIT ──
+let isPasswordRecovery = false;
+
+window.addEventListener('load', async () => {
+  await new Promise(r => setTimeout(r, 200));
+
+  // Check if URL contains a recovery token (user clicked the reset link in email)
+  const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+  const queryParams = new URLSearchParams(window.location.search);
+  const type = hashParams.get('type') || queryParams.get('type');
+
+  if (type === 'recovery') {
+    isPasswordRecovery = true;
+  }
+
+  let session = null;
+  try {
+    const { data, error } = await sb.auth.getSession();
+    if (!error) session = data?.session;
+  } catch(e) {
+    console.error('Supabase init error:', e);
+  }
+
+  document.getElementById('splash').classList.add('hide');
+  setTimeout(() => {
+    document.getElementById('splash').style.display = 'none';
+    if (isPasswordRecovery && session) {
+      // User came from reset email — show the new password screen
+      currentUser = session.user;
+      showResetScreen();
+    } else if (session) {
+      currentUser = session.user;
+      showApp();
+    } else {
+      showAuth();
+    }
+  }, 500);
+});
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    // Supabase fired the recovery event — show the new password form
+    isPasswordRecovery = true;
+    currentUser = session?.user || null;
+    document.getElementById('splash').style.display = 'none';
+    showResetScreen();
+  } else if (event === 'SIGNED_IN' && session && !isPasswordRecovery) {
+    currentUser = session.user;
+    showApp();
+  } else if (event === 'USER_UPDATED' && session) {
+    // Password was successfully updated — go to app
+    isPasswordRecovery = false;
+    currentUser = session.user;
+    hideResetScreen();
+    showApp();
+  } else if (event === 'SIGNED_OUT') {
+    isPasswordRecovery = false;
+    currentUser = null;
+    showAuth();
+  }
+});
+
+function showAuth() {
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('reset-screen').classList.remove('show');
+  document.getElementById('auth-screen').classList.add('show');
+}
+
+function showResetScreen() {
+  document.getElementById('auth-screen').classList.remove('show');
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('reset-screen').classList.add('show');
+  document.getElementById('reset-pass').value = '';
+  document.getElementById('reset-pass-confirm').value = '';
+  document.getElementById('reset-msg').style.display = 'none';
+  document.getElementById('reset-btn').style.display = 'block';
+}
+
+function hideResetScreen() {
+  document.getElementById('reset-screen').classList.remove('show');
+}
+
+async function doResetPassword() {
+  const pass = document.getElementById('reset-pass').value;
+  const confirm = document.getElementById('reset-pass-confirm').value;
+  const btn = document.getElementById('reset-btn');
+  const msg = document.getElementById('reset-msg');
+
+  if (!pass || pass.length < 6) {
+    msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.';
+    msg.className = 'auth-msg error';
+    msg.style.display = 'block';
+    return;
+  }
+  if (pass !== confirm) {
+    msg.textContent = 'As senhas não coincidem. Tente novamente.';
+    msg.className = 'auth-msg error';
+    msg.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Salvando...';
+
+  try {
+    const { error } = await sb.auth.updateUser({ password: pass });
+    if (error) {
+      msg.textContent = traduzirErro(error.message);
+      msg.className = 'auth-msg error';
+      msg.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = 'Salvar nova senha';
+    } else {
+      msg.textContent = '✅ Senha alterada com sucesso! Redirecionando...';
+      msg.className = 'auth-msg success';
+      msg.style.display = 'block';
+      btn.style.display = 'none';
+      // onAuthStateChange USER_UPDATED will fire and redirect to app
+    }
+  } catch(e) {
+    msg.textContent = 'Erro ao salvar. Tente novamente.';
+    msg.className = 'auth-msg error';
+    msg.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Salvar nova senha';
+  }
+}
+
+function togglePassVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.innerHTML = isHidden
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+
+async function showApp() {
+  document.getElementById('auth-screen').classList.remove('show');
+  document.getElementById('app').classList.add('show');
+  await loadUserProfile();
+  await loadTransactions();
+  renderDashboard();
+  renderTips();
+  document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mpicker-label').textContent = monthNames[currentMonth] + ' ' + currentYear;
+  document.querySelectorAll('.mopt')[currentMonth].classList.add('active');
+  document.getElementById('dash-sub').textContent = `Resumo de ${monthNames[currentMonth]} de ${currentYear}`;
+  document.getElementById('dash-greeting').textContent = `Olá, ${(currentUser.user_metadata?.name || currentUser.email.split('@')[0]).split(' ')[0]} 👋`;
+  // Initialize all Lucide icons
+  lucide.createIcons();
+}
+
+// ── AUTH FUNCTIONS ──
+function switchAuthTab(tab, el) {
+  hideForgot();
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('auth-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('auth-signup').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('login-msg').style.display = 'none';
+  document.getElementById('signup-msg').style.display = 'none';
+}
+
+function showForgot() {
+  document.getElementById('auth-login-signup').style.display = 'none';
+  const f = document.getElementById('auth-forgot');
+  f.classList.add('show');
+  document.getElementById('forgot-email').value = document.getElementById('login-email').value || '';
+  document.getElementById('forgot-msg').style.display = 'none';
+}
+
+function hideForgot() {
+  document.getElementById('auth-login-signup').style.display = 'block';
+  document.getElementById('auth-forgot').classList.remove('show');
+}
+
+async function doForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const btn = document.getElementById('forgot-btn');
+  const msg = document.getElementById('forgot-msg');
+  if (!email) {
+    msg.textContent = 'Informe seu e-mail cadastrado.';
+    msg.className = 'auth-msg error';
+    msg.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Enviando...';
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href
+  });
+  btn.disabled = false;
+  btn.innerHTML = 'Enviar link de redefinição';
+  if (error) {
+    msg.textContent = traduzirErro(error.message);
+    msg.className = 'auth-msg error';
+  } else {
+    msg.textContent = '✅ Link enviado! Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.';
+    msg.className = 'auth-msg success';
+    btn.style.display = 'none';
+  }
+  msg.style.display = 'block';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  if (!email || !pass) return showAuthMsg('login', 'Preencha e-mail e senha.', 'error');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Entrando...';
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) showAuthMsg('login', traduzirErro(error.message), 'error');
+  } catch(e) {
+    showAuthMsg('login', 'Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'Entrar';
+}
+
+async function doSignup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pass = document.getElementById('signup-pass').value;
+  const btn = document.getElementById('signup-btn');
+  if (!name || !email || !pass) return showAuthMsg('signup', 'Preencha todos os campos.', 'error');
+  if (pass.length < 6) return showAuthMsg('signup', 'A senha precisa ter pelo menos 6 caracteres.', 'error');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Criando conta...';
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { name } } });
+    if (error) {
+      showAuthMsg('signup', traduzirErro(error.message), 'error');
+    } else if (data?.user?.identities?.length === 0) {
+      showAuthMsg('signup', 'Este e-mail já está cadastrado. Tente fazer login.', 'error');
+    } else {
+      showAuthMsg('signup', '✅ Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.', 'success');
+    }
+  } catch(e) {
+    showAuthMsg('signup', 'Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'Criar conta';
+}
+
+async function doLogout() {
+  // Limpa todo o estado local
+  currentUser = null;
+  transactions = [];
+  piggies = [];
+  investments = [];
+  isPasswordRecovery = false;
+
+  // Faz o logout no Supabase
+  await sb.auth.signOut();
+
+  // Limpa os campos do formulário de login
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-msg').style.display = 'none';
+  document.getElementById('signup-msg').style.display = 'none';
+
+  // Garante que a aba "Entrar" está ativa e visível
+  document.querySelectorAll('.auth-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.getElementById('auth-login').style.display = 'block';
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-login-signup').style.display = 'block';
+  document.getElementById('auth-forgot').classList.remove('show');
+
+  // Mostra a tela de login
+  showAuth();
+}
+
+function showAuthMsg(form, text, type) {
+  const el = document.getElementById(form + '-msg');
+  el.textContent = text;
+  el.className = 'auth-msg ' + type;
+  el.style.display = 'block';
+}
+
+function traduzirErro(msg) {
+  if (msg.includes('Invalid login')) return 'E-mail ou senha incorretos.';
+  if (msg.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+  if (msg.includes('already registered')) return 'Este e-mail já está cadastrado.';
+  if (msg.includes('weak')) return 'Senha muito fraca. Use pelo menos 6 caracteres.';
+  return msg;
+}
+
+// ── USER PROFILE ──
+async function loadUserProfile() {
+  const { data } = await sb.from('profiles').select('name,plan').eq('id', currentUser.id).single();
+  const name = data?.name || currentUser.user_metadata?.name || currentUser.email.split('@')[0];
+  const initials = name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('sidebar-username').textContent = name;
+  document.getElementById('user-avatar-initials').textContent = initials;
+  // sync mobile topbar avatar
+  const mobAv = document.getElementById('mob-avatar-initials');
+  if (mobAv) mobAv.textContent = initials;
+  // sync mobile side menu
+  const mobMenuAv = document.getElementById('mob-menu-avatar');
+  if (mobMenuAv) mobMenuAv.textContent = initials;
+  const mobMenuName = document.getElementById('mob-menu-name');
+  if (mobMenuName) mobMenuName.textContent = name;
+  const mobMenuEmail = document.getElementById('mob-menu-email');
+  if (mobMenuEmail) mobMenuEmail.textContent = currentUser?.email || '';
+}
+
+// ── TRANSACTIONS ──
+async function loadTransactions() {
+  const { data, error } = await sb.from('transactions').select('*').eq('user_id', currentUser.id).order('date', {ascending: false});
+  if (!error) transactions = data || [];
+}
+
+async function addTransaction() {
+  const description = document.getElementById('tx-desc').value.trim();
+  const val = parseFloat(document.getElementById('tx-val').value);
+  const cat = document.getElementById('tx-cat').value;
+  const date = document.getElementById('tx-date').value;
+  if (!description || !val || !date) return;
+  const btn = document.getElementById('tx-save-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const { data, error } = await sb.from('transactions').insert([{
+    user_id: currentUser.id, description, cat, type: txType, val, date,
+    icon: catIcons[cat] || '📌'
+  }]).select().single();
+  btn.disabled = false; btn.innerHTML = 'Salvar';
+  if (!error && data) {
+    transactions.unshift(data);
+    closeModal('tx');
+    document.getElementById('tx-desc').value = '';
+    document.getElementById('tx-val').value = '';
+    renderTxList();
+    renderDashboard();
+  }
+}
+
+async function deleteTransaction(id) {
+  await sb.from('transactions').delete().eq('id', id).eq('user_id', currentUser.id);
+  transactions = transactions.filter(t => t.id !== id);
+  renderTxList();
+  renderDashboard();
+}
+
+function getMonthTransactions(month, year) {
+  return transactions.filter(t => {
+    const d = new Date(t.date + 'T00:00:00');
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const cur = getMonthTransactions(currentMonth, currentYear);
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const prev = getMonthTransactions(prevMonth, prevYear);
+
+  const sumIncome = txs => txs.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.val), 0);
+  const sumExpense = txs => txs.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.val), 0);
+
+  const curInc = sumIncome(cur), curExp = sumExpense(cur);
+  const prevInc = sumIncome(prev), prevExp = sumExpense(prev);
+  const saldo = transactions.reduce((s,t) => t.type==='income' ? s+Number(t.val) : s-Number(t.val), 0);
+  const balanco = curInc - curExp;
+
+  const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const pctChange = (cur, prev) => prev ? ((cur-prev)/prev*100).toFixed(1) : null;
+
+  document.getElementById('dash-saldo').textContent = fmt(saldo);
+  document.getElementById('dash-receitas').textContent = fmt(curInc);
+  document.getElementById('dash-despesas').textContent = fmt(curExp);
+  document.getElementById('dash-balanco').textContent = fmt(balanco);
+  document.getElementById('dash-balanco').style.color = balanco >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const pInc = pctChange(curInc, prevInc);
+  const pExp = pctChange(curExp, prevExp);
+  document.getElementById('dash-rec-badge').textContent = pInc !== null ? (pInc >= 0 ? `↑ ${pInc}% vs mês anterior` : `↓ ${Math.abs(pInc)}% vs mês anterior`) : 'Sem dados anteriores';
+  document.getElementById('dash-desp-badge').textContent = pExp !== null ? (pExp >= 0 ? `↑ ${pExp}% vs mês anterior` : `↓ ${Math.abs(pExp)}% vs mês anterior`) : 'Sem dados anteriores';
+
+  // Últimas transações no dashboard (5 mais recentes do mês)
+  const recent = cur.slice(0, 5);
+  const txList = document.getElementById('dash-tx-list');
+  if (!recent.length) {
+    txList.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px">Nenhuma transação este mês.</div>';
+  } else {
+    txList.innerHTML = recent.map(t => `
+      <div class="tx-item">
+        <div class="tx-ico">${t.icon||'📌'}</div>
+        <div><div class="tx-name">${t.description}</div><div class="tx-cat">${t.cat}</div></div>
+        <div style="text-align:right"><div class="tx-amt ${t.type}">${t.type==='income'?'+':'-'}${fmt(Number(t.val))}</div><div class="tx-dt">${t.date.split('-').reverse().slice(0,2).join('/')}</div></div>
+      </div>`).join('');
+  }
+
+  // Cat bars
+  renderDashCats(cur);
+  renderLineChart(cur, prev);
+  lucide.createIcons();
+}
+
+function renderDashCats(cur) {
+  const cats = {};
+  cur.filter(t => t.type === 'expense').forEach(t => { cats[t.cat] = (cats[t.cat]||0) + Number(t.val); });
+  const entries = Object.entries(cats).sort((a,b) => b[1]-a[1]);
+  const max = entries[0]?.[1] || 1;
+  const el = document.getElementById('cat-bars');
+  if (!entries.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px">Nenhum gasto este mês.</div>'; return; }
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:9px">${entries.map(([cat,val]) => {
+    const pct = Math.round((val/max)*100);
+    return `<div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span style="color:var(--gray-600)">${cat}</span><span style="font-weight:500">R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div></div>`;
+  }).join('')}</div>`;
+}
+
+// ── TRANSACTIONS PAGE ──
+function renderTxList() {
+  const list = document.getElementById('tx-full-list');
+  const filtered = txFilter === 'all' ? transactions : transactions.filter(t => t.type === txFilter);
+  if (!filtered.length) { list.innerHTML='<div style="text-align:center;padding:36px;color:var(--gray-400)">Nenhuma transação encontrada.</div>'; return; }
+  const fmt = v => Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  list.innerHTML = filtered.map(t => `
+    <div class="tx-item">
+      <div class="tx-ico">${t.icon||'📌'}</div>
+      <div style="flex:1;min-width:0"><div class="tx-name">${t.description}</div><div class="tx-cat">${t.cat}</div></div>
+      <div style="text-align:right;flex-shrink:0"><div class="tx-amt ${t.type}">${t.type==='income'?'+':'-'}R$ ${fmt(t.val)}</div><div class="tx-dt">${t.date.split('-').reverse().join('/')}</div></div>
+      <button class="tx-del" onclick="deleteTransaction('${t.id}')" title="Excluir"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>
+    </div>`).join('');
+  lucide.createIcons();
+}
+
+function filterTx(f, el) {
+  txFilter = f;
+  document.querySelectorAll('#page-transacoes .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTxList();
+}
+function setTxType(t, el) {
+  txType = t;
+  document.querySelectorAll('#modal-tx .tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── COMPARATIVO ──
+function renderComparativo() {
+  const cur = getMonthTransactions(currentMonth, currentYear);
+  const prevM = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevY = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const prev = getMonthTransactions(prevM, prevY);
+  const fmt = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+  const expCur = cur.filter(t => t.type==='expense');
+  const expPrev = prev.filter(t => t.type==='expense');
+  const totCur = expCur.reduce((s,t) => s+Number(t.val), 0);
+  const totPrev = expPrev.reduce((s,t) => s+Number(t.val), 0);
+  const diff = totCur - totPrev;
+  const pct = totPrev ? ((diff/totPrev)*100).toFixed(1) : '—';
+
+  document.getElementById('comp-sub').textContent = `${monthNames[currentMonth]} vs ${monthNames[prevM]} de ${currentYear}`;
+  document.getElementById('comp-cur').textContent = fmt(totCur);
+  document.getElementById('comp-prev').textContent = fmt(totPrev);
+  document.getElementById('comp-diff').textContent = (diff >= 0 ? '+' : '') + fmt(diff);
+  document.getElementById('comp-diff').style.color = diff > 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('comp-pct').textContent = pct !== '—' ? (diff >= 0 ? '+' : '') + pct + '%' : '—';
+  document.getElementById('comp-pct').style.color = diff > 0 ? 'var(--red)' : diff < 0 ? 'var(--green)' : 'var(--gray-400)';
+
+  // Build cat data from real transactions
+  const cats = {};
+  expCur.forEach(t => { cats[t.cat] = cats[t.cat] || {cur:0,prev:0}; cats[t.cat].cur += Number(t.val); });
+  expPrev.forEach(t => { cats[t.cat] = cats[t.cat] || {cur:0,prev:0}; cats[t.cat].prev += Number(t.val); });
+  const catEntries = Object.entries(cats);
+
+  if (!catEntries.length) {
+    document.getElementById('comp-chart').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px">Sem dados de gastos.</div>';
+    document.getElementById('comp-table').innerHTML = '';
+    return;
+  }
+
+  const max = Math.max(...catEntries.flatMap(([,d]) => [d.cur, d.prev]));
+  document.getElementById('comp-chart').innerHTML = `<div style="display:flex;gap:8px;align-items:flex-end">${catEntries.map(([cat,d]) => {
+    const hc = Math.round((d.cur/max)*100), hp = Math.round((d.prev/max)*100);
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px">
+      <div style="display:flex;align-items:flex-end;gap:3px;height:100px">
+        <div class="bar cur" style="height:${hc}px;flex:1;min-width:14px" title="${monthNames[currentMonth]}: R$${d.cur.toFixed(2)}"></div>
+        <div class="bar prv" style="height:${hp}px;flex:1;min-width:14px" title="${monthNames[prevM]}: R$${d.prev.toFixed(2)}"></div>
+      </div>
+      <div style="font-size:10px;color:var(--gray-400);text-align:center">${cat}</div>
+    </div>`;
+  }).join('')}</div>`;
+
+  document.getElementById('comp-table').innerHTML = `
+    <table class="comp-table">
+      <thead><tr><th>Categoria</th><th>Mês atual</th><th>Mês anterior</th><th>Diferença</th><th>Variação</th></tr></thead>
+      <tbody>${catEntries.map(([cat,d]) => {
+        const df = d.cur - d.prev;
+        const p = d.prev ? ((df/d.prev)*100).toFixed(1) : '—';
+        const bc = df > 0 ? 'dn' : df < 0 ? 'up' : 'flat';
+        const arrow = df > 0 ? '↑' : df < 0 ? '↓' : '—';
+        return `<tr>
+          <td><span class="cat-dot" style="background:${catColors[cat]||'#ccc'}"></span><strong style="font-weight:500">${cat}</strong></td>
+          <td style="font-weight:500">R$ ${d.cur.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="color:var(--gray-400)">R$ ${d.prev.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="color:${df>0?'var(--red)':df<0?'var(--green)':'var(--gray-400)'};font-weight:500">${df>=0?'+':''}R$ ${Math.abs(df).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td><span class="comp-badge ${bc}">${arrow} ${p !== '—' ? (df>=0?'+':'')+p+'%' : '—'}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  lucide.createIcons();
+}
+
+// ── LINE CHART ──
+function renderLineChart(cur, prev) {
+  const el = document.getElementById('dash-line-chart');
+  const W = 700, H = 130, pad = {l:42,r:14,t:8,b:26};
+  const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+
+  // Build cumulative daily totals
+  const buildCumulative = (txs, days) => {
+    const daily = Array(days).fill(0);
+    txs.forEach(t => {
+      const d = new Date(t.date + 'T00:00:00');
+      const day = d.getDate() - 1;
+      if (day >= 0 && day < days) daily[day] += Number(t.val);
+    });
+    const cum = [];
+    let sum = 0;
+    daily.forEach(v => { sum += v; cum.push(sum); });
+    return cum;
+  };
+
+  const curData = buildCumulative(cur.filter(t=>t.type==='expense'), daysInMonth);
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevYear = currentMonth === 0 ? currentYear-1 : currentYear;
+  const daysInPrev = new Date(prevYear, prevMonth+1, 0).getDate();
+  const prevData = buildCumulative(prev.filter(t=>t.type==='expense'), daysInPrev);
+  const maxV = Math.max(...curData, ...prevData, 1);
+
+  const pxF = (i,len) => (pad.l + (i/(len-1||1))*cw).toFixed(1);
+  const pyF = v => (pad.t + ch - (v/maxV)*ch).toFixed(1);
+  const pathStr = d => d.map((v,i) => (i?'L':'M')+pxF(i,d.length)+','+pyF(v)).join(' ');
+  const areaStr = (d) => `M${pxF(0,d.length)},${(pad.t+ch).toFixed(1)} L${d.map((v,i)=>pxF(i,d.length)+','+pyF(v)).join(' L')} L${pxF(d.length-1,d.length)},${(pad.t+ch).toFixed(1)} Z`;
+
+  const grids = [0,.25,.5,.75,1].map(f => {
+    const y=(pad.t+ch-f*ch).toFixed(1);
+    const label = maxV >= 1000 ? (f*maxV/1000).toFixed(1)+'k' : Math.round(f*maxV);
+    return `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="#E8E8E8" stroke-width="1"/>
+<text x="${pad.l-5}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="#AFAFAF" font-family="Inter">${label}</text>`;
+  }).join('');
+  const xlabs = [1, Math.ceil(daysInMonth/4), Math.ceil(daysInMonth/2), Math.ceil(3*daysInMonth/4), daysInMonth].map(d => {
+    const x = (pad.l+((d-1)/(daysInMonth-1))*cw).toFixed(1);
+    return `<text x="${x}" y="${H-5}" text-anchor="middle" font-size="9" fill="#AFAFAF" font-family="Inter">${d}</text>`;
+  }).join('');
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="height:${H}px">
+  <defs>
+    <linearGradient id="gc2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF6B2B" stop-opacity=".18"/><stop offset="100%" stop-color="#FF6B2B" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gp2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#AFAFAF" stop-opacity=".1"/><stop offset="100%" stop-color="#AFAFAF" stop-opacity="0"/></linearGradient>
+  </defs>
+  ${grids}${xlabs}
+  <path d="${areaStr(prevData)}" fill="url(#gp2)"/>
+  <path d="${areaStr(curData)}" fill="url(#gc2)"/>
+  <path d="${pathStr(prevData)}" fill="none" stroke="#D0D0D0" stroke-width="1.5" stroke-dasharray="4 3" stroke-linecap="round"/>
+  <path d="${pathStr(curData)}" fill="none" stroke="#FF6B2B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
+
+// ── COFRINHOS ──
+async function loadPiggies() {
+  const { data } = await sb.from('piggies').select('*').eq('user_id', currentUser.id).order('created_at');
+  piggies = data || [];
+}
+
+async function renderPiggies() {
+  await loadPiggies();
+  const grid = document.getElementById('piggy-grid');
+  if (!piggies.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);grid-column:1/-1">Nenhum cofrinho ainda. Crie sua primeira meta!</div>';
+    return;
+  }
+  const fmt = v => Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  grid.innerHTML = piggies.map((p, i) => {
+    const pct = Math.min(100, Math.round((Number(p.saved)/Number(p.goal))*100));
+    const remaining = Math.max(0, Number(p.goal) - Number(p.saved));
+    return `<div class="piggy-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px">
+        <div style="font-size:28px;line-height:1">${p.emoji||'🐷'}</div>
+        <button class="btn btn-outline" style="padding:5px 9px;font-size:11.5px;gap:4px" onclick="openEditPiggy(${i})">
+          <i data-lucide="pencil" style="width:12px;height:12px"></i>
+          Editar
+        </button>
+      </div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:2px">${p.name}</div>
+      <div style="font-size:12px;color:var(--gray-400);margin-bottom:10px">Faltam R$ ${fmt(remaining)}</div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px">
+        <span style="color:var(--orange);font-weight:500">R$ ${fmt(p.saved)} guardados</span>
+        <span style="color:var(--gray-400)">de R$ ${fmt(p.goal)}</span>
+      </div>
+      <div style="height:1px;background:var(--gray-200);margin:10px 0"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;color:var(--gray-400)">${pct}% concluído</span>
+        <button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;gap:5px" onclick="openDeposit(${i})">
+          <i data-lucide="plus" style="width:12px;height:12px"></i>
+          Depositar
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+// ── EMOJI AUTO-DETECTION ──
+function detectPiggyEmoji(name) {
+  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const rules = [
+
+    // ── ROSTOS E EMOÇÕES ──
+    { keys: ['feliz','alegre','sorrindo','sorriso','animado','contente','satisfeito'], emoji: '😀' },
+    { keys: ['gargalhada','risada','rir','comico','hilario','engracado'], emoji: '😂' },
+    { keys: ['apaixonado','amor','coracao olhos','paixao'], emoji: '😍' },
+    { keys: ['piscar','piscadinha','flerte'], emoji: '😉' },
+    { keys: ['pensando','pensativo','reflexao'], emoji: '🤔' },
+    { keys: ['surpresa','surpreso','chocado','espantado'], emoji: '😮' },
+    { keys: ['triste','tristeza','choro','choran','lagrima'], emoji: '😢' },
+    { keys: ['bravo','raiva','irritado','furioso'], emoji: '😠' },
+    { keys: ['legal','foda','incrivel','otimo'], emoji: '😎' },
+    { keys: ['doente','enfermo','gripado','mal'], emoji: '🤒' },
+
+    // ── GESTOS E PESSOAS ──
+    { keys: ['academia','musculacao','crossfit','gym','fitness','personal','pilates','yoga','funcional','treino','malhacao'], emoji: '🏋️' },
+    { keys: ['corrida','maratona','triathlon','5k','10k','running','jogging'], emoji: '🏃' },
+    { keys: ['ciclismo competitivo','pedalar','bicicleta esporte'], emoji: '🚴' },
+    { keys: ['natacao','nadar','piscina competicao','hidroginastica'], emoji: '🏊' },
+    { keys: ['surf','prancha','onda'], emoji: '🏄' },
+    { keys: ['escalada','montanhismo','alpinismo','boulder'], emoji: '🧗' },
+    { keys: ['yoga','meditacao','zen'], emoji: '🧘' },
+    { keys: ['danca','ballet','dancar','sapateado','forro','samba','tango','salsa'], emoji: '💃' },
+    { keys: ['casamento','noivado','alianca','anel','noiva','noivo','lua de mel','honeymoon','debutante'], emoji: '💍' },
+    { keys: ['bebe','filho','filha','crianca','gestacao','maternidade','gravidez','enxoval','quarto bebe','berco'], emoji: '👶' },
+    { keys: ['crianca','infantil','kids'], emoji: '👦' },
+    { keys: ['familia','reuniao familia','lar'], emoji: '👨‍👩‍👧‍👦' },
+    { keys: ['idoso','aposentadoria','previdencia','pgbl','vgbl','inss','terceira idade'], emoji: '👴' },
+    { keys: ['medico','medica','doutor','doutora','consulta','clinica geral'], emoji: '👨‍⚕️' },
+    { keys: ['policia','seguranca publica','delegacia'], emoji: '👮' },
+    { keys: ['bombeiro','incendio','resgate'], emoji: '👨‍🚒' },
+    { keys: ['professor','professora','aula particular','tutor','tutoria'], emoji: '👨‍🏫' },
+    { keys: ['cozinheiro','chef','gastronomia profissional'], emoji: '👨‍🍳' },
+    { keys: ['artista','pintor','escultor','ilustrador'], emoji: '👨‍🎨' },
+    { keys: ['programador','desenvolvedor','dev','codigo','software'], emoji: '👨‍💻' },
+    { keys: ['astronauta','espaco','nasa'], emoji: '👨‍🚀' },
+    { keys: ['musico','banda','grupo musical'], emoji: '👨‍🎤' },
+    { keys: ['fazendeiro','agricultor','agronegocio'], emoji: '👨‍🌾' },
+    { keys: ['operario','construtor','pedreiro'], emoji: '👷' },
+
+    // ── ANIMAIS ──
+    { keys: ['cachorro','cao','dog','labrador','golden','bulldog','poodle','shih tzu','yorkshire','schnauzer','pastor alemao','husky','border collie','rottweiler','pitbull','beagle','dachshund'], emoji: '🐶' },
+    { keys: ['gato','felino','persa','siames','maine coon','ragdoll','bengal','sphynx'], emoji: '🐱' },
+    { keys: ['rato','hamster','gerbil','roedor'], emoji: '🐭' },
+    { keys: ['coelho','rabbit','mini coelho'], emoji: '🐰' },
+    { keys: ['raposa'], emoji: '🦊' },
+    { keys: ['urso','panda','ursinho'], emoji: '🐻' },
+    { keys: ['tigre','onca','leopardo','felino grande'], emoji: '🐯' },
+    { keys: ['leao'], emoji: '🦁' },
+    { keys: ['vaca','boi','gado','fazenda animal'], emoji: '🐮' },
+    { keys: ['porco','leitao','suino'], emoji: '🐷' },
+    { keys: ['ovelha','carneiro','la'], emoji: '🐑' },
+    { keys: ['macaco','primata'], emoji: '🐵' },
+    { keys: ['galinha','frango','pintinho'], emoji: '🐔' },
+    { keys: ['pinguim'], emoji: '🐧' },
+    { keys: ['passaro','calopsita','periquito','canario','papagaio','arara'], emoji: '🐦' },
+    { keys: ['pato','pato animal'], emoji: '🦆' },
+    { keys: ['aguia','gaviao','falcao','coruja'], emoji: '🦅' },
+    { keys: ['sapo','ra'], emoji: '🐸' },
+    { keys: ['cobra','serpente','jiboia','cascavel'], emoji: '🐍' },
+    { keys: ['lagarto','iguana','gecko','camaleao'], emoji: '🦎' },
+    { keys: ['baleia','golfinho','tubarao','peixe','aquario','mergulho'], emoji: '🐳' },
+    { keys: ['tartaruga'], emoji: '🐢' },
+    { keys: ['caranguejo','lagosta'], emoji: '🦀' },
+    { keys: ['borboleta','inseto','bicho'], emoji: '🦋' },
+    { keys: ['abelha','mel','apicultura','colmeia'], emoji: '🐝' },
+    { keys: ['cavalo','equitacao','hipismo','haras','jumento'], emoji: '🐴' },
+    { keys: ['unicornio'], emoji: '🦄' },
+    { keys: ['elefante','rinoceronte','hipopotamo'], emoji: '🐘' },
+    { keys: ['girafa'], emoji: '🦒' },
+    { keys: ['zebra'], emoji: '🦓' },
+    { keys: ['gorila','chimpanze'], emoji: '🦍' },
+    { keys: ['veado','cervo'], emoji: '🦌' },
+    { keys: ['pet','animal estimacao','bicho','veterinario','petshop','banho tosa'], emoji: '🐾' },
+
+    // ── PLANTAS E NATUREZA ──
+    { keys: ['jardim','jardinagem','horta','planta','vaso','paisagismo','cultivar'], emoji: '🌱' },
+    { keys: ['arvore','reflorestamento','arborizar','bosque','floresta'], emoji: '🌳' },
+    { keys: ['flor','bouquet','buque','rosa','orquidea','tulipa','girassol'], emoji: '🌸' },
+    { keys: ['girassol'], emoji: '🌻' },
+    { keys: ['cacto','suculenta'], emoji: '🌵' },
+    { keys: ['cogumelo','fungo'], emoji: '🍄' },
+    { keys: ['folha','outono','natureza'], emoji: '🍃' },
+    { keys: ['uva','vinha','vinicola'], emoji: '🍇' },
+    { keys: ['melancia','melao'], emoji: '🍉' },
+    { keys: ['maca','pera','fruta'], emoji: '🍎' },
+    { keys: ['banana'], emoji: '🍌' },
+    { keys: ['abacaxi','tropical'], emoji: '🍍' },
+    { keys: ['morango'], emoji: '🍓' },
+    { keys: ['cereja'], emoji: '🍒' },
+    { keys: ['pessego','damasco'], emoji: '🍑' },
+    { keys: ['limao','laranja','citrico'], emoji: '🍋' },
+    { keys: ['coco','agua de coco'], emoji: '🥥' },
+    { keys: ['abacate'], emoji: '🥑' },
+    { keys: ['berinjela','beringela'], emoji: '🍆' },
+    { keys: ['batata','inhame','mandioca'], emoji: '🥔' },
+    { keys: ['cenoura'], emoji: '🥕' },
+    { keys: ['milho'], emoji: '🌽' },
+    { keys: ['pimenta','tempero'], emoji: '🌶️' },
+    { keys: ['pepino','abobrinha'], emoji: '🥒' },
+    { keys: ['alface','salada verde'], emoji: '🥬' },
+    { keys: ['brocolis','couve'], emoji: '🥦' },
+    { keys: ['alho','cebola'], emoji: '🧄' },
+
+    // ── COMIDA E BEBIDA ──
+    { keys: ['restaurante','jantar','almoco','refeicao','gastronomia','culinaria'], emoji: '🍽️' },
+    { keys: ['pizza'], emoji: '🍕' },
+    { keys: ['hamburguer','lanche','fast food','mcdonalds','burger king','bobs'], emoji: '🍔' },
+    { keys: ['batata frita','fritas'], emoji: '🍟' },
+    { keys: ['hot dog','cachorro quente'], emoji: '🌭' },
+    { keys: ['sanduiche','sandwich','sub'], emoji: '🥪' },
+    { keys: ['taco','burrito','mexicano'], emoji: '🌮' },
+    { keys: ['sushi','japonesa','temaki','sashimi','ramen','udon'], emoji: '🍱' },
+    { keys: ['churrasco','carne','churrasqueira','grelha','bbq','barbecue','picanha','costela'], emoji: '🥩' },
+    { keys: ['frango','galinha assada','frango assado'], emoji: '🍗' },
+    { keys: ['bacon','presunto','frios','embutido'], emoji: '🥓' },
+    { keys: ['ovo','ovos','mexido','frito','cozido'], emoji: '🍳' },
+    { keys: ['arroz','feijao','comida brasileira','marmita'], emoji: '🍚' },
+    { keys: ['macarrao','massa','espaguete','nhoque','lasanha','ravioli'], emoji: '🍝' },
+    { keys: ['pao','padaria','baguete','croissant','focaccia'], emoji: '🍞' },
+    { keys: ['bolo','torta','doceria','confeitaria'], emoji: '🎂' },
+    { keys: ['sorvete','gelato','frozen','acai'], emoji: '🍦' },
+    { keys: ['chocolate','trufa','bombom','brigadeiro','coxinha doce'], emoji: '🍫' },
+    { keys: ['doce','bala','confeito','candy'], emoji: '🍬' },
+    { keys: ['pipoca','cinema lanche'], emoji: '🍿' },
+    { keys: ['mel','abelhinha'], emoji: '🍯' },
+    { keys: ['cafe','cafezinho','espresso','cappuccino','latte','nespresso','maquina cafe','cafeteira'], emoji: '☕' },
+    { keys: ['cha','chazinho','ervas','camomila'], emoji: '🍵' },
+    { keys: ['suco','vitamina','smoothie','detox'], emoji: '🥤' },
+    { keys: ['agua','hidratacao'], emoji: '💧' },
+    { keys: ['cerveja','chope','bar','happy hour','boteco'], emoji: '🍺' },
+    { keys: ['vinho','adega','vinicola','sommelier','espumante','prosecco','champagne','whisky','whiskey','bourbon','gin','vodka','rum','cachaça'], emoji: '🍷' },
+    { keys: ['coquetel','cocktail','drink','mocktail'], emoji: '🍹' },
+    { keys: ['leite','iogurte','queijo','laticinios'], emoji: '🥛' },
+    { keys: ['manteiga','margarina'], emoji: '🧈' },
+    { keys: ['panificadora','padaria propria','forno'], emoji: '🥖' },
+
+    // ── ATIVIDADES ESPORTIVAS ──
+    { keys: ['futebol','fut','pelada','campeonato','copa','mundial'], emoji: '⚽' },
+    { keys: ['basquete','basketball','nba'], emoji: '🏀' },
+    { keys: ['volei','vôlei','volleyball'], emoji: '🏐' },
+    { keys: ['tenis','raquete','padel','squash'], emoji: '🎾' },
+    { keys: ['beisebol','baseball'], emoji: '⚾' },
+    { keys: ['golfe','golf','taco','campo golfe'], emoji: '⛳' },
+    { keys: ['boxe','muay thai','kickboxing','luta boxe'], emoji: '🥊' },
+    { keys: ['jiu jitsu','karate','judô','judo','aikido','kung fu','taekwondo','artes marciais'], emoji: '🥋' },
+    { keys: ['skate','skateboard','longboard'], emoji: '🛹' },
+    { keys: ['esqui','snowboard','neve esporte'], emoji: '⛷️' },
+    { keys: ['pesca','pescar','anzol','vara pesca'], emoji: '🎣' },
+    { keys: ['tiro','arco flecha','arqueria'], emoji: '🎯' },
+    { keys: ['bilhar','sinuca','snooker'], emoji: '🎱' },
+    { keys: ['xadrez','dama','jogo tabuleiro'], emoji: '♟️' },
+    { keys: ['boliche'], emoji: '🎳' },
+    { keys: ['hipismo','equitacao','cavalo esporte'], emoji: '🏇' },
+    { keys: ['paraquedas','paraquedismo','skydiving'], emoji: '🪂' },
+    { keys: ['mergulho','scuba','apneia'], emoji: '🤿' },
+    { keys: ['handebol','handball'], emoji: '🤾' },
+    { keys: ['ginastica','acrobacia'], emoji: '🤸' },
+    { keys: ['luta livre','wrestling'], emoji: '🤼' },
+    { keys: ['haltere','peso','levantamento peso'], emoji: '🏋️' },
+    { keys: ['pulo','salto','atletismo'], emoji: '🏅' },
+    { keys: ['medalha','trofeu','campeonato ganhar','primeiro lugar'], emoji: '🥇' },
+
+    // ── VIAGEM E LUGARES ──
+    { keys: ['viagem','ferias','viajar','trip','passeio','turismo','tour','mochilao','road trip'], emoji: '✈️' },
+    { keys: ['hotel','hostel','pousada','airbnb','resort','spa resort'], emoji: '🏨' },
+    { keys: ['mapa','gps','rota','navegacao'], emoji: '🗺️' },
+    { keys: ['passagem','passagem aerea','milhas','pontos','smiles','tudoazul','livelo'], emoji: '🎫' },
+    { keys: ['cruzeiro','navio','navio cruzeiro','msc','costa cruzeiros'], emoji: '🚢' },
+    { keys: ['praia','litoral','florianopolis','buzios','arraial','ilhabela','balneario','natal','fortaleza','maceio','porto seguro','trancoso','jericoacoara','noronha','cabo frio','angra','paraty'], emoji: '🏖️' },
+    { keys: ['montanha','serra','trilha','camping','acampamento','gramado','canela','campos do jordao','chapada','itatiaia','peropolis','petropolis'], emoji: '⛰️' },
+    { keys: ['europa','paris','franca','italia','roma','espanha','madri','barcelona','portugal','lisboa','alemanha','berlim','holanda','amsterdam','grecia','atenas','austria','viena','suica','praga','hungria','budapest','turquia','istanbul'], emoji: '🗺️' },
+    { keys: ['disney','universal','orlando','miami','nova york','nyc','eua','usa','estados unidos','las vegas','cancun','mexico','caribe','bahamas','cuba','colombia','peru','chile','argentina','buenos aires','machu picchu'], emoji: '🌎' },
+    { keys: ['japao','tokyo','osaka','china','beijing','xangai','dubai','abu dhabi','india','tailandia','bali','indonesia','vietnam','singapura','australia','sydney','nova zelandia','africa do sul','marrocos','egito'], emoji: '🌏' },
+    { keys: ['castelo','palacio','catedral','basílica','monumento','patrimonio historico'], emoji: '🏰' },
+    { keys: ['parque','parque tematico','parque nacional','ecoturismo','cachoeira'], emoji: '🎡' },
+    { keys: ['museu','galeria arte','exposicao','pinacoteca'], emoji: '🏛️' },
+
+    // ── TRANSPORTE ──
+    { keys: ['carro','veiculo','automovel','celta','onix','gol','civic','corolla','hb20','kwid','uno','palio','ka','fiesta','polo','virtus','jetta','compass','renegade','toro','argo','cronos','mobi','etios','yaris','camry','rav4','hilux','land cruiser','fit','hrv','city','accord','kicks','versa','sentra','ecosport','mustang','bmw','mercedes','audi','porsche','tesla','ferrari','lamborghini','volvo','jaguar','land rover'], emoji: '🚗' },
+    { keys: ['moto','motocicleta','scooter','harley','kawasaki','yamaha','suzuki','ducati','honda cb','titan','factor','fazer','cg 160','nmax','pcx','burgman'], emoji: '🏍️' },
+    { keys: ['caminhao','caminhonete','pickup','f-150','hilux dupla','s10','ranger','amarok','l200','triton','frontier'], emoji: '🚛' },
+    { keys: ['bicicleta','bike','ciclismo','mtb','speed','gravel','caloi','specialized'], emoji: '🚲' },
+    { keys: ['patinete','hoverboard','trotinete'], emoji: '🛴' },
+    { keys: ['onibus','micro onibus','van'], emoji: '🚌' },
+    { keys: ['metr','trem','metro','subway','ferrovia'], emoji: '🚆' },
+    { keys: ['barco','lancha','iate','veleiro','bote','jetski','caiaque','canoa'], emoji: '⛵' },
+    { keys: ['aviao','aeronave','piloto','voar','helicoptero','ultraleve'], emoji: '🛩️' },
+    { keys: ['uber','99','taxi','transporte aplicativo'], emoji: '🚕' },
+    { keys: ['moto eletrica','carro eletrico','veiculo eletrico','ev','hibrido'], emoji: '⚡' },
+
+    // ── MORADIA ──
+    { keys: ['casa','imovel','apto','apartamento','lar','moradia','habitacao','quitinete','flat','studio','cobertura','duplex','triplex','mansao','sobrado'], emoji: '🏡' },
+    { keys: ['reforma','renovacao','obra','construcao','construir','ampliar','puxadinho','varanda','garagem','banheiro','cozinha','quarto','sala','piso','azulejo','telhado'], emoji: '🏗️' },
+    { keys: ['terreno','lote','chacara','fazenda','sitio','rancho','haras','rural'], emoji: '🌾' },
+    { keys: ['aluguel','sair do aluguel','chave'], emoji: '🔑' },
+    { keys: ['mobilia','moveis','sofa','cama','guarda roupa','armario','mesa','cadeira','decoracao','rack','estante','colchao','luminaria'], emoji: '🛋️' },
+    { keys: ['piscina','jacuzzi','spa','sauna','banheira de hidromassagem'], emoji: '🏊' },
+    { keys: ['painel solar','energia solar','placa solar','gerador'], emoji: '☀️' },
+    { keys: ['cerca','muro','portao','alarme','camera seguranca'], emoji: '🔒' },
+    { keys: ['ar condicionado','climatizador','aquecedor','lareira'], emoji: '❄️' },
+    { keys: ['cortina','persianas','papel parede','tapete','espelho'], emoji: '🪞' },
+    { keys: ['geladeira','fogao','microondas','lavadora','maquina lavar','secadora','lava loucas','freezer','coifa'], emoji: '🏠' },
+
+    // ── TECNOLOGIA ──
+    { keys: ['celular','iphone','smartphone','android','samsung','motorola','xiaomi','poco','redmi','oneplus','pixel'], emoji: '📱' },
+    { keys: ['computador','notebook','laptop','macbook','mac','imac','pc','desktop','workstation','lenovo','dell','hp','asus','acer','surface','chromebook'], emoji: '💻' },
+    { keys: ['tv','televisao','televisor','smart tv','oled','qled','4k','8k','tela','monitor'], emoji: '📺' },
+    { keys: ['camera','fotografar','fotografia','lente','drone','gopro','mirrorless','dslr','canon','nikon','sony alpha','fujifilm'], emoji: '📷' },
+    { keys: ['console','playstation','ps5','ps4','xbox','series x','nintendo','switch','games','videogame'], emoji: '🎮' },
+    { keys: ['fone','headphone','headset','airpods','som','audio','caixa de som','soundbar','subwoofer','jbl','bose','beats'], emoji: '🎧' },
+    { keys: ['tablet','ipad','kindle','e-reader'], emoji: '📱' },
+    { keys: ['relogio','smartwatch','apple watch','garmin','rolex','omega'], emoji: '⌚' },
+    { keys: ['impressora','scanner','multifuncional','plotter'], emoji: '🖨️' },
+    { keys: ['roteador','internet','fibra','wi-fi','wifi'], emoji: '📡' },
+    { keys: ['projetor','datashow'], emoji: '📽️' },
+    { keys: ['realidade virtual','vr','oculus','meta quest'], emoji: '🥽' },
+    { keys: ['impressora 3d','filamento 3d','cnc'], emoji: '🖨️' },
+    { keys: ['robo aspirador','roomba','robo limpeza'], emoji: '🤖' },
+    { keys: ['drone profissional','fpv','aeromodelo'], emoji: '🚁' },
+
+    // ── EDUCAÇÃO ──
+    { keys: ['faculdade','universidade','graduacao','pos graduacao','mba','mestrado','doutorado','phd','intercambio','estudar','escola','colegio','ensino'], emoji: '🎓' },
+    { keys: ['curso','capacitacao','treinamento','workshop','mentoria','coaching','certificacao','bootcamp','especializacao','formacao'], emoji: '📋' },
+    { keys: ['idioma','ingles','frances','espanhol','alemao','japones','mandarim','italiano','russo','arabe','lingua'], emoji: '📚' },
+    { keys: ['material escolar','livro didatico','caderno','mochila escolar','uniforme'], emoji: '✏️' },
+    { keys: ['livro','biblioteca','livraria','leitura','ebook'], emoji: '📖' },
+    { keys: ['escola filho','colegio filho','educacao filho'], emoji: '🏫' },
+    { keys: ['brinquedo','boneca','lego','playmobil','barbie','hot wheels'], emoji: '🧸' },
+
+    // ── SAÚDE ──
+    { keys: ['saude','medico','cirurgia','tratamento','terapia','psicologia','psiquiatria','hospital','clinica','dentista','ortodontia','implante','ortopedico','laser','estetica','plastica','rinoplastia','lipoaspiracao','botox','preenchimento','harmonizacao'], emoji: '🏥' },
+    { keys: ['academia','musculacao','crossfit','gym','fitness','personal','pilates','yoga','funcional'], emoji: '🏋️' },
+    { keys: ['nutricao','nutricionista','dieta','suplemento','whey','creatina','vitamina'], emoji: '🥗' },
+    { keys: ['massagem','fisioterapia','quiropraxia','acupuntura','osteopatia','reiki'], emoji: '💆' },
+    { keys: ['oculos','lentes','visao','oftalmologista','laser olho','lasik'], emoji: '👓' },
+    { keys: ['cabelo','cabeleireiro','escova','progressiva','botox capilar','tintura','barba'], emoji: '💈' },
+    { keys: ['manicure','pedicure','unhas','nail art','gel','acrilico'], emoji: '💅' },
+    { keys: ['perfume','fragrancia','cologne'], emoji: '🧴' },
+    { keys: ['academia home','esteira','bicicleta ergometrica','eliptico'], emoji: '🏃' },
+
+    // ── NEGÓCIOS E FINANÇAS ──
+    { keys: ['negocio','empresa','empreendimento','startup','abrir empresa','cnpj','mei','franquia','loja','e-commerce','marketplace'], emoji: '💼' },
+    { keys: ['investimento','acoes','bolsa','fundo','tesouro','cdb','lci','lca','fii','etf','criptomoeda','bitcoin','ethereum','renda variavel'], emoji: '📈' },
+    { keys: ['divida','quitar','credito','emprestimo','financiamento','quitacao','nome limpo'], emoji: '💳' },
+    { keys: ['emergencia','reserva emergencia','fundo emergencia','seguranca financeira','colchao financeiro'], emoji: '🛡️' },
+    { keys: ['aposentadoria','previdencia','pgbl','vgbl','inss','renda passiva','independencia financeira'], emoji: '🏦' },
+    { keys: ['seguro','seguro vida','seguro carro','seguro casa','seguro viagem','plano saude'], emoji: '📋' },
+    { keys: ['estoque','mercadoria','produto','materia prima','insumo'], emoji: '📦' },
+    { keys: ['escritorio','home office','mesa escritorio','cadeira escritorio','setup'], emoji: '🖥️' },
+    { keys: ['marketing','publicidade','propaganda','anuncio','ads','midia social'], emoji: '📣' },
+    { keys: ['contabilidade','contador','balanco','nota fiscal'], emoji: '📊' },
+
+    // ── CULTURA E LAZER ──
+    { keys: ['show','concerto','festival','musica','ingresso','lollapalooza','rock in rio','tomorrowland','balada','festa'], emoji: '🎵' },
+    { keys: ['cinema','filme','serie','streaming','netflix','disney plus','hbo','amazon prime'], emoji: '🎬' },
+    { keys: ['teatro','espetaculo','musical','opera','ballet'], emoji: '🎭' },
+    { keys: ['instrumento','violao','guitarra','piano','teclado','bateria','baixo','ukulele','saxofone','flauta','violino'], emoji: '🎸' },
+    { keys: ['arte','pintura','escultura','museu','exposicao','galeria','cultura'], emoji: '🎨' },
+    { keys: ['fotografia','ensaio','estudio fotografico','book'], emoji: '📸' },
+    { keys: ['podcast','microfone','gravacao','estudio','producao'], emoji: '🎙️' },
+    { keys: ['aniversario','comemorar','celebracao','formatura','15 anos','festa infantil','cha de bebe','cha revelacao'], emoji: '🎉' },
+    { keys: ['presente','gift','mimo','surpresa presente'], emoji: '🎁' },
+    { keys: ['decoracao festa','balao','enfeite','confeito'], emoji: '🎈' },
+    { keys: ['jogo','board game','card game','jogo de tabuleiro'], emoji: '🎲' },
+    { keys: ['carta','baralho','poker','truco'], emoji: '🃏' },
+    { keys: ['puzzle','quebra cabeca'], emoji: '🧩' },
+    { keys: ['roupa','vestuario','moda','tenis','nike','adidas','vans','converse','sapato','bolsa','acessorio','joia','oculos sol','grife','louis vuitton','gucci','prada','chanel','hermes'], emoji: '👗' },
+    { keys: ['joalheria','ouro','prata','diamante','rubi','esmeralda','safira','berilo'], emoji: '💎' },
+    { keys: ['relogio moda','relogio grife','cartier','patek','audemars'], emoji: '⌚' },
+
+    // ── NATUREZA E MEIO AMBIENTE ──
+    { keys: ['sustentabilidade','energia renovavel','biogas','compostagem','reciclagem','ecologia','verde'], emoji: '♻️' },
+    { keys: ['paisagismo','arborizar','horta urbana','agricultura urbana'], emoji: '🌿' },
+    { keys: ['parque natural','reserva','ecoturismo','cachoeira','rio','lago'], emoji: '🌊' },
+    { keys: ['lua','estrela','astronomia','telescopio','espaco','via lactea'], emoji: '🌙' },
+    { keys: ['sol','verao','ensolarado'], emoji: '☀️' },
+    { keys: ['chuva','guarda chuva','tempestade'], emoji: '🌧️' },
+    { keys: ['neve','inverno','frio'], emoji: '❄️' },
+    { keys: ['arco iris'], emoji: '🌈' },
+    { keys: ['vulcao','terremoto','catastrofe natural'], emoji: '🌋' },
+    { keys: ['deserto','sahara','arido'], emoji: '🏜️' },
+    { keys: ['floresta','amazonia','mata','selva','jungle'], emoji: '🌲' },
+
+    // ── FERRAMENTAS E TRABALHO ──
+    { keys: ['equipamento','ferramenta','martelo','chave de fenda','chave inglesa','furadeira','parafuso','prego','carpintaria','marcenaria'], emoji: '🔧' },
+    { keys: ['maquinario','torno','solda','compressor','andaime','betoneira','esmerilhadeira','lixadeira'], emoji: '⚙️' },
+    { keys: ['construcao','obra pesada','engenharia civil','arquitetura'], emoji: '🏗️' },
+    { keys: ['energia eletrica','instalacao eletrica','eletricista','disjuntor','quadro eletrico'], emoji: '⚡' },
+    { keys: ['pintura','tinta','rolo','pistola pintura','verniz'], emoji: '🖌️' },
+    { keys: ['jardinagem profissional','podadora','roçadeira','cortador grama'], emoji: '🌿' },
+    { keys: ['limpeza','faxina','aspirador','vassoura','esfregao'], emoji: '🧹' },
+    { keys: ['costura','maquina costura','bordado','tricô','croche'], emoji: '🧵' },
+
+    // ── ESPIRITUALIDADE ──
+    { keys: ['igreja','catedral','templo','retiro espiritual','peregrinacao','caminho de santiago','terra santa','jerusalem','meca','vaticano','religiao','fe'], emoji: '🙏' },
+    { keys: ['meditacao','zen','mindfulness','autoconhecimento','espiritualidade'], emoji: '🧘' },
+    { keys: ['caridade','doacao','voluntariado','ong','solidariedade','ajuda'], emoji: '❤️' },
+
+    // ── OBJETOS DO DIA A DIA ──
+    { keys: ['oculos de sol','oculos grife','ray ban','oakley','tom ford'], emoji: '🕶️' },
+    { keys: ['mochila','mala','mala viagem','mochila viagem','bagagem'], emoji: '🎒' },
+    { keys: ['carteira','porta documento'], emoji: '👜' },
+    { keys: ['guarda chuva','sombrinha'], emoji: '☂️' },
+    { keys: ['tesoura','navalha','cuidado pessoal'], emoji: '✂️' },
+    { keys: ['sabonete','shampoo','condicionador','higiene','produto higiene'], emoji: '🧼' },
+    { keys: ['escova dente','fio dental','higiene bucal','creme dental'], emoji: '🪥' },
+    { keys: ['maquiagem','batom','sombra','rimmel','base','blush','contorno','make'], emoji: '💄' },
+    { keys: ['vela','aromaterapia','incenso','difusor'], emoji: '🕯️' },
+    { keys: ['quadro','moldura','foto','retrato'], emoji: '🖼️' },
+    { keys: ['livro agenda','planner','organizador','bullet journal'], emoji: '📓' },
+
+  ];
+
+  for (const rule of rules) {
+    for (const key of rule.keys) {
+      if (n.includes(key)) return rule.emoji;
+    }
+  }
+
+  return '🎯';
+}
+
+function updatePiggyEmoji(previewId, name) {
+  const emoji = detectPiggyEmoji(name);
+  const el = document.getElementById(previewId);
+  if (el) el.textContent = emoji;
+}
+
+async function addPiggy() {
+  const name = document.getElementById('pg-name').value.trim();
+  const emoji = detectPiggyEmoji(name);
+  const goal = parseFloat(document.getElementById('pg-goal').value) || 0;
+  const saved = parseFloat(document.getElementById('pg-saved').value) || 0;
+  if (!name || !goal) return;
+  const btn = document.getElementById('pg-save-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const { error } = await sb.from('piggies').insert([{user_id: currentUser.id, name, emoji, goal, saved}]);
+  btn.disabled = false; btn.innerHTML = 'Criar Meta';
+  if (!error) {
+    closeModal('piggy');
+    document.getElementById('pg-name').value = '';
+    document.getElementById('pg-goal').value = '';
+    document.getElementById('pg-saved').value = '';
+    document.getElementById('pg-emoji-preview').textContent = '🎯';
+    renderPiggies();
+  }
+}
+
+function openDeposit(i) {
+  editingPiggyIdx = i;
+  const p = piggies[i];
+  const pct = Math.min(100, Math.round((Number(p.saved)/Number(p.goal))*100));
+  document.getElementById('deposit-title').textContent = `Depositar — ${p.name}`;
+  document.getElementById('deposit-saved').textContent = `R$ ${Number(p.saved).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+  document.getElementById('deposit-goal').textContent = `R$ ${Number(p.goal).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+  document.getElementById('deposit-prog').style.width = pct + '%';
+  document.getElementById('deposit-pct').textContent = pct + '%';
+  document.getElementById('deposit-val').value = '';
+  openModal('deposit');
+}
+
+async function confirmDeposit() {
+  const val = parseFloat(document.getElementById('deposit-val').value);
+  if (!val || val <= 0) return;
+  const p = piggies[editingPiggyIdx];
+  const newSaved = Math.min(Number(p.goal), Number(p.saved) + val);
+  const btn = document.getElementById('deposit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const { error } = await sb.from('piggies').update({saved: newSaved}).eq('id', p.id).eq('user_id', currentUser.id);
+  btn.disabled = false; btn.innerHTML = 'Depositar';
+  if (!error) { closeModal('deposit'); renderPiggies(); }
+}
+
+function openEditPiggy(i) {
+  editingPiggyIdx = i;
+  editingPiggyId = piggies[i].id;
+  const p = piggies[i];
+  document.getElementById('edit-pg-name').value = p.name;
+  document.getElementById('edit-pg-emoji-preview').textContent = p.emoji || detectPiggyEmoji(p.name);
+  document.getElementById('edit-pg-goal').value = p.goal;
+  document.getElementById('edit-pg-saved').value = p.saved;
+  hideDelConfirm();
+  openModal('edit-piggy');
+}
+
+async function saveEditPiggy() {
+  const name = document.getElementById('edit-pg-name').value.trim();
+  const emoji = detectPiggyEmoji(name);
+  const goal = parseFloat(document.getElementById('edit-pg-goal').value);
+  const saved = Math.min(goal, parseFloat(document.getElementById('edit-pg-saved').value) || 0);
+  if (!name || !goal) return;
+  const btn = document.getElementById('edit-pg-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const { error } = await sb.from('piggies').update({name,emoji,goal,saved}).eq('id', editingPiggyId).eq('user_id', currentUser.id);
+  btn.disabled = false; btn.innerHTML = 'Salvar';
+  if (!error) { closeModal('edit-piggy'); renderPiggies(); }
+}
+
+async function confirmDeletePiggy() {
+  await sb.from('piggies').delete().eq('id', editingPiggyId).eq('user_id', currentUser.id);
+  closeModal('edit-piggy');
+  renderPiggies();
+}
+
+function showDelConfirm() { document.getElementById('del-confirm').classList.add('show'); }
+function hideDelConfirm() { document.getElementById('del-confirm').classList.remove('show'); }
+
+// ── INVESTIMENTOS ──
+async function loadInvestments() {
+  const { data } = await sb.from('investments').select('*').eq('user_id', currentUser.id).order('created_at');
+  investments = data || [];
+}
+
+async function renderInvestimentos() {
+  await loadInvestments();
+  const fmt = v => Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const total = investments.reduce((s,i) => s+Number(i.val), 0);
+
+  document.getElementById('inv-total').textContent = 'R$ ' + fmt(total);
+  document.getElementById('inv-count').textContent = investments.length;
+  document.getElementById('inv-rendimento').textContent = investments.length ? '— (atualize manualmente)' : '—';
+
+  const listEl = document.getElementById('inv-list');
+  if (!investments.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:36px;color:var(--gray-400)">Nenhum ativo cadastrado.</div>';
+    document.getElementById('donut-slices').innerHTML = '';
+    document.getElementById('donut-legend').innerHTML = '';
+    document.getElementById('donut-total').innerHTML = 'R$<br>0';
+    return;
+  }
+
+  listEl.innerHTML = investments.map(inv => `
+    <div class="inv-row">
+      <div class="inv-ticker">${inv.ticker}</div>
+      <div class="inv-name">${inv.name} <span style="font-size:11px;color:var(--gray-400)">${inv.type}</span></div>
+      <div class="inv-val">R$ ${fmt(inv.val)}</div>
+      <div class="inv-chg ${inv.pos?'pos':'neg'}">${inv.change_pct||'—'}</div>
+      <button class="tx-del" onclick="deleteInv('${inv.id}')" title="Excluir"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>
+    </div>`).join('');
+
+  // Donut
+  const types = {};
+  investments.forEach(inv => { types[inv.type] = (types[inv.type]||0) + Number(inv.val); });
+  const colors = ['#FF6B2B','#FF8C55','#FFB899','#0D0D0D','#AFAFAF'];
+  const r=60,cx=80,cy=80,circ=2*Math.PI*r;
+  let offset = 0;
+  const entries = Object.entries(types);
+  document.getElementById('donut-total').innerHTML = total >= 1000 ? `R$<br>${(total/1000).toFixed(1)}K` : `R$<br>${fmt(total)}`;
+  document.getElementById('donut-slices').innerHTML = entries.map(([,val],i) => {
+    const frac=val/total, dash=frac*circ, gap=circ-dash;
+    const s = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[i%colors.length]}" stroke-width="20" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${(-offset*circ).toFixed(2)}"/>`;
+    offset+=frac; return s;
+  }).join('');
+  lucide.createIcons();
+  document.getElementById('donut-legend').innerHTML = entries.map(([type,val],i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:${colors[i%colors.length]};display:inline-block;flex-shrink:0"></span><span style="font-size:12.5px">${type}</span></span>
+      <span style="font-size:12.5px;font-weight:500">R$ ${fmt(val)} <span style="color:var(--gray-400);font-weight:400">(${Math.round(val/total*100)}%)</span></span>
+    </div>`).join('');
+}
+
+async function addInv() {
+  const ticker = document.getElementById('inv-ticker').value.trim();
+  const name = document.getElementById('inv-name-input').value.trim();
+  const type = document.getElementById('inv-type').value;
+  const val = parseFloat(document.getElementById('inv-val').value);
+  const change_pct = document.getElementById('inv-change').value.trim() || '—';
+  const pos = !change_pct.startsWith('-');
+  if (!ticker || !val) return;
+  const btn = document.getElementById('inv-save-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const { error } = await sb.from('investments').insert([{user_id: currentUser.id, ticker, name: name||ticker, type, val, change_pct, pos}]);
+  btn.disabled = false; btn.innerHTML = 'Adicionar';
+  if (!error) { closeModal('inv'); renderInvestimentos(); }
+}
+
+async function deleteInv(id) {
+  await sb.from('investments').delete().eq('id', id).eq('user_id', currentUser.id);
+  renderInvestimentos();
+}
+
+// ── DICAS ──
+function renderTips() {
+  document.getElementById('tips-list').innerHTML = tips.map(t => `
+    <div class="tip-card">
+      <div style="font-size:21px;flex-shrink:0;margin-top:2px">${t.icon}</div>
+      <div><div style="font-size:14px;font-weight:500;margin-bottom:4px">${t.title}</div><div style="font-size:13px;color:var(--gray-600);line-height:1.55">${t.text}</div><span class="tip-tag">${t.tag}</span></div>
+    </div>`).join('');
+}
+
+// ── NAVIGATION ──
+function navigate(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (el) el.classList.add('active');
+  // sync mobile nav
+  document.querySelectorAll('.mob-nav-item').forEach(b => {
+    const matches = b.getAttribute('onclick') && b.getAttribute('onclick').includes(page);
+    b.classList.toggle('active', matches);
+  });
+  if (page === 'transacoes') renderTxList();
+  if (page === 'comparativo') renderComparativo();
+  if (page === 'cofrinhos') renderPiggies();
+  if (page === 'investimentos') renderInvestimentos();
+}
+
+// ── MOBILE SIDE MENU ──
+function openMobMenu() {
+  document.getElementById('mob-side-menu').classList.add('open');
+  document.getElementById('mob-side-menu-overlay').classList.add('open');
+  lucide.createIcons({ nodes: [document.getElementById('mob-side-menu')] });
+}
+function closeMobMenu() {
+  document.getElementById('mob-side-menu').classList.remove('open');
+  document.getElementById('mob-side-menu-overlay').classList.remove('open');
+}
+
+// ── MOBILE NAVIGATION ──
+function mobileNavigate(page, el) {
+  // sync desktop nav too
+  const desktopBtn = document.querySelector(`#sidebar .nav-item[onclick*="${page}"]`);
+  navigate(page, desktopBtn || el);
+  // update mobile nav active state
+  document.querySelectorAll('.mob-nav-item').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  // scroll to top on mobile
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── SIDEBAR ──
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+  document.getElementById('main').classList.toggle('wide', sidebarCollapsed);
+  const toggleEl = document.getElementById('sidebar-toggle');
+  toggleEl.innerHTML = sidebarCollapsed
+    ? `<i data-lucide="chevron-right" style="width:14px;height:14px"></i>`
+    : `<i data-lucide="chevron-left" style="width:14px;height:14px"></i>`;
+  lucide.createIcons({ nodes: [toggleEl] });
+}
+
+// ── MONTH PICKER ──
+function toggleMonthPicker() {
+  const dd = document.getElementById('month-dd');
+  const btn = document.getElementById('mpicker-btn');
+  const open = dd.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+function selectMonth(idx) {
+  currentMonth = idx;
+  document.querySelectorAll('.mopt').forEach((b,i) => b.classList.toggle('active', i === idx));
+  document.getElementById('mpicker-label').textContent = monthNames[idx] + ' ' + currentYear;
+  document.getElementById('dash-sub').textContent = `Resumo de ${monthNames[idx]} de ${currentYear}`;
+  document.getElementById('month-dd').classList.remove('open');
+  document.getElementById('mpicker-btn').classList.remove('open');
+  renderDashboard();
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.mpicker-wrap')) {
+    document.getElementById('month-dd').classList.remove('open');
+    document.getElementById('mpicker-btn').classList.remove('open');
+  }
+});
+
+// ── MODALS ──
+function openModal(id) { document.getElementById('modal-'+id).classList.add('open'); }
+function closeModal(id) { document.getElementById('modal-'+id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
