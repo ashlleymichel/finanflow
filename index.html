@@ -34,8 +34,8 @@
   }
   #auth-screen.show { display:flex; }
   .auth-box { width:400px; max-width:92vw; display:flex; flex-direction:column; align-items:center; }
-  .auth-header { text-align:center; margin-bottom:28px; }
-  .auth-logo { font-size:38px; font-weight:400; color:var(--orange); letter-spacing:-1px; margin-bottom:8px; display:block; }
+  .auth-header { text-align:center; margin-bottom:22px; }
+  .auth-logo { font-size:38px; font-weight:600; color:var(--orange); letter-spacing:-1px; margin-bottom:8px; display:block; }
   .auth-tagline { font-size:14px; color:var(--gray-400); letter-spacing:.2px; font-style:italic; }
   .auth-divider { width:36px; height:2px; background:var(--orange); border-radius:99px; margin:14px auto 0; opacity:.35; }
   .auth-card { background:var(--white); border-radius:var(--radius); padding:28px; box-shadow:0 8px 40px rgba(0,0,0,0.08); border:1px solid var(--gray-200); width:100%; }
@@ -275,8 +275,6 @@
     <!-- Header centralizado -->
     <div class="auth-header">
       <span class="auth-logo">FinanFlow</span>
-      <div class="auth-tagline">Seu dinheiro no fluxo certo.</div>
-      <div class="auth-divider"></div>
     </div>
 
     <div class="auth-card">
@@ -293,11 +291,9 @@
           <div class="auth-form">
             <div><label class="fl">E-mail</label><input class="auth-input" type="email" id="login-email" placeholder="seu@email.com"></div>
             <div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-                <label class="fl" style="margin:0">Senha</label>
-                <button class="forgot-link" onclick="showForgot()">Esqueci minha senha</button>
-              </div>
+              <label class="fl">Senha</label>
               <input class="auth-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+              <button class="forgot-link" onclick="showForgot()" style="margin-top:7px;display:block">Esqueci minha senha</button>
             </div>
             <button class="auth-btn" id="login-btn" onclick="doLogin()">Entrar</button>
             <div id="login-msg" style="display:none" class="auth-msg"></div>
@@ -342,8 +338,6 @@
   <div class="reset-box">
     <div class="reset-header">
       <span class="auth-logo">FinanFlow</span>
-      <div class="auth-tagline">Seu dinheiro no fluxo certo.</div>
-      <div class="auth-divider"></div>
     </div>
     <div class="reset-card">
       <div class="reset-title">Criar nova senha</div>
@@ -904,7 +898,31 @@ async function doSignup() {
 }
 
 async function doLogout() {
+  // Limpa todo o estado local
+  currentUser = null;
+  transactions = [];
+  piggies = [];
+  investments = [];
+  isPasswordRecovery = false;
+
+  // Faz o logout no Supabase
   await sb.auth.signOut();
+
+  // Limpa os campos do formulário de login
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-msg').style.display = 'none';
+  document.getElementById('signup-msg').style.display = 'none';
+
+  // Garante que a aba "Entrar" está ativa e visível
+  document.querySelectorAll('.auth-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.getElementById('auth-login').style.display = 'block';
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-login-signup').style.display = 'block';
+  document.getElementById('auth-forgot').classList.remove('show');
+
+  // Mostra a tela de login
+  showAuth();
 }
 
 function showAuthMsg(form, text, type) {
